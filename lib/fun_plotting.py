@@ -7,6 +7,23 @@ from matplotlib.colors import ListedColormap, LinearSegmentedColormap
 from matplotlib.lines import Line2D
 from matplotlib.legend_handler import HandlerLineCollection
 import numpy as np
+import seaborn as sns
+
+
+def plot_log2FC(df, title):
+    """Plot the log2FC of the interactions
+    Args:
+        df (DataFrame): dataframe with the log2FC of the interactions (rows: genes, columns: genes)
+        title (string): title of the plot
+    """
+    plt.figure(figsize=(7,9))
+    sns.heatmap(np.array(df).astype(float), annot=True, fmt="g", 
+                xticklabels=df.columns, yticklabels=df.index, 
+            cmap="coolwarm", cbar=False, center=0, linewidth=.5, annot_kws={"size":16, 'color':'black'})
+    plt.xticks(fontsize=18)
+    plt.yticks(fontsize=18)
+    plt.title(title, fontsize=20)
+    plt.show()
 
 
 def plotmat(m, ax):
