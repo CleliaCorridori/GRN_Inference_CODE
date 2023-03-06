@@ -63,9 +63,9 @@ def to_thr_matrix(matrix, thr=0.02):
     thr_matrix[np.abs(thr_matrix) <  (thr*np.nanmax(np.abs(matrix)))] = 0
     return thr_matrix
   
-def interactions_plot(matx, matx_info, thr=0.05, nbins=30):
+def interactions_plot(matx, matx_info, thr=0.01, nbins=30):
     thx_perc = thr*np.max(matx)
-    print(thx_perc)
+    # print(thx_perc)
     J_lin = matx.flatten()
     J_mean = np.mean(J_lin)
     J_std = np.std(J_lin)
