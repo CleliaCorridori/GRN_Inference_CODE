@@ -194,6 +194,34 @@ def TP_plot(interaction_list, interaction_matrix, genes_order, inferred_int_thr=
         
     return(TP_fraction, TP_info, interaction_matrix)
 
+# ----------------------- # BEST MODEL SELECTION using known interactions
+def Inferred_matrix(prec_sel, matrices_sel, interactions, genes_order, interaction_thr, text):
+    """Function to select the best inferred matrix from the grid search"""
+    #select the matrices with higher fraction of correctly inferred interactions
+    high_idx = np.where(prec_sel == prec_sel.max())[0] 
+    high_matrices = matrices_sel[high_idx,:,:]
+
+    high_info_int = np.zeros((4, len(interactions), len(high_idx)))
+    high_TP_frac=np.zeros(len(high_idx))
+
+    high_meanMatx = np.zeros((len(genes_order), len(genes_order)))
+    counter = 0
+    idxs = []
+    for ii in range(len(high_idx)):
+        high_TP_frac[ii], high_info_int[:,:,ii], matrix = TP_plot(interactions, high_matrices[ii,:,:], genes_order, 
+                                                    inferred_int_thr=interaction_thr, Norm_Matx = False,
+                                                    data_type= text + str(ii+1) +", "+ str(np.round(prec_sel[high_idx[ii]],2)),
+                                                    figplot=False, verbose=False, nbin=30, Norm=True)
+        # print(f"THR: {'{:.3f}'.format(np.max(np.abs(matrix))*interaction_thr)}")
+
+        if high_TP_frac[ii] == prec_sel.max():
+            high_meanMatx += high_matrices[ii,:,:]
+            counter += 1
+            idxs.append(high_idx[ii])
+            
+    high_meanMatx = high_meanMatx/counter 
+    return(high_meanMatx, np.array(idxs))
+
 
 # ----------------------- # LogFC INFO
 def InteractionList(df, perc=0):
