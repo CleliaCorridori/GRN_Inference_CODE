@@ -118,11 +118,11 @@ class asynch_reconstruction():
         else:
             plt.show()
 
-    def generate_samples(self, t_size = None):
+    def generate_samples(self, t_size = None, seed=1):
         if t_size == None:
             t_size = self.Nsteps
         return fun_asynch.generate_samples_asynch(self.h, self.J, self.delta_t,
-                                                  gamma = self.gamma, Nsteps = t_size, seed = 123)
+                                                  gamma = self.gamma, Nsteps = t_size, seed = seed)
     
     def generate_samples_SetData(self, matx=np.array([]), field=np.array([]), t_size = None, seed=0):
         if t_size == None:

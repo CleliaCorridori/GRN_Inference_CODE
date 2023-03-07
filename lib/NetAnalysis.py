@@ -141,7 +141,7 @@ def reciprocity(adj_matrix):
     # Compute the number of edges
     num_edges = np.count_nonzero(adj_matrix)
     # Compute the number of reciprocated edges WITHOUT considering the diagonal elements
-    num_reciprocated = np.count_nonzero(adj_matrix * adj_matrix.T)-adj_matrix.shape[0]
+    num_reciprocated = np.count_nonzero(adj_matrix * adj_matrix.T) - np.count_nonzero(adj_matrix.diagonal())
     # Compute and return the reciprocity
     return round(num_reciprocated / num_edges,2)
 
