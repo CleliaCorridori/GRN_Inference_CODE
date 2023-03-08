@@ -14,13 +14,20 @@ class MidpointNormalize(pltcolors.Normalize):
         return np.ma.masked_array(np.interp(value, x, y), np.isnan(value))
 
     
-def plotmat(m, fig, ax, ax_names, text, cmap = 'RdBu_r'):
+def plotmat(m, fig, ax, ax_names, text, fix = False, cmap = 'RdBu_r'):
     #fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(8,6))
-    img = ax.imshow(m, cmap = cmap, clim=(np.nanmin(m), np.nanmax(m)),
+    if fix == True:
+        img = ax.imshow(m, cmap = cmap, clim=(-1, 1),
                     norm = MidpointNormalize(midpoint=0,
-                                             vmin=np.nanmin(m),
-                                             vmax=np.nanmax(m))
+                                             vmin=-1,
+                                             vmax=1)
                    )
+    else:
+        img = ax.imshow(m, cmap = cmap, clim=(np.nanmin(m), np.nanmax(m)),
+                        norm = MidpointNormalize(midpoint=0,
+                                                vmin=np.nanmin(m),
+                                                vmax=np.nanmax(m))
+                    )
     
     cbarM = fig.colorbar(img, ax = ax)
     cbarM.set_label(r'$C_{ij}$', rotation = -90, labelpad = 20, fontsize = 12)
