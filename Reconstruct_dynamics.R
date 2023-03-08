@@ -20,6 +20,7 @@ tmpt <- (0:time.len)*0.01
 for(i in 1:length(tmpt)){
 	t <- tmpt[i]
 	eAt <- Re(U %*% diag(exp(l*t)) %*% invU)
+	#write.table(dim(eAt), "prova.txt", sep="\t", col.names=F, row.names=F)
 	mean[,i] <- eAt %*% init
 }
 

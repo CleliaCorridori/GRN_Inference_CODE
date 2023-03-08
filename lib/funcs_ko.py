@@ -273,3 +273,37 @@ def KO_plots_SimMultiple(KO_spins, KO_genes_order, wt_avg, wt_std):
     plt.title("Average spin values for each genes", fontsize=20)
     plt.grid(True)
     plt.show()
+    
+def KO_plots_SimMultiple_SCODE(KO_spins, KO_genes_order, wt_avg, wt_std):
+    """(For 3 KO genes)
+    compute the average and std of the activity of the simulated data"""
+    # mean active time
+    std_temp = KO_spins.reshape((KO_spins.shape[0],KO_spins.shape[1]*KO_spins.shape[2]))
+    # KO_std_spin = np.array(KO_spins_std.mean(axis=1))
+    KO_std_spin = std_temp.std(axis=1)
+    KO_avg_spin = np.array(KO_spins.mean(axis=1))
+    KO_avg_spin = np.array(KO_avg_spin.mean(axis=1))
+
+    plt.figure(figsize=(18,5))
+    plt.errorbar(KO_genes_order, KO_avg_spin, yerr=KO_std_spin/np.sqrt(len(wt_std)),  
+                    alpha=1, 
+                    fmt="o", ms = 10,
+                    elinewidth=3,
+                    color="steelblue",
+                    capsize=10,
+                    label= "simulated Data")
+
+    plt.errorbar(KO_genes_order, wt_avg, yerr=wt_std/np.sqrt(len(wt_std)), 
+                    alpha=1, 
+                    fmt="o", ms = 10,
+                    elinewidth=1,
+                    color="indianred",
+                    capsize=10,
+                    label = "original data")
+    plt.legend(loc="upper left", fontsize=16)
+    plt.xticks(fontsize=12)
+    plt.ylabel("Average spin", fontsize=16)
+    plt.xlabel("Genes", fontsize=16)
+    plt.title("Average spin values for each genes", fontsize=20)
+    plt.grid(True)
+    plt.show()
