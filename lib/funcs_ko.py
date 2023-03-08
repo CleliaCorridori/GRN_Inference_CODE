@@ -83,10 +83,12 @@ def sum_squared_abs_diff(array1, array2):
     return np.sqrt(np.sum(diff))
 
 # ------------------------------ Knockout functions
-def info_KO(matx,model, KO_gene="Rbpj", genes_order=genes_order):
+def info_KO(matx,model, KO_gene="Rbpj", genes_order=genes_order, multiple=False):
     """Remove the KO_gene from the interaction matrix and from the field"""
-    KO_gene_idk = np.where(genes_order == KO_gene)[0]
-
+    if multiple:
+        KO_gene_idk = [np.where(genes_order == KO_gene[i])[0][0]  for i in range(len(KO_gene))]
+    else:
+        KO_gene_idk = np.where(genes_order == KO_gene)[0] 
     KO_rec_matx = np.delete(matx, KO_gene_idk, axis=0)
     KO_rec_matx = np.delete(KO_rec_matx, KO_gene_idk, axis=1)
     KO_rec_field = np.delete(model.h, KO_gene_idk, axis=0)
@@ -143,6 +145,7 @@ def KO_plots_oneSim(model, matx, field, KO_genes_order, wt_avg, wt_std, seed=1, 
         plt.xlabel("Genes", fontsize=16)
         plt.title("Average spin values for each genes", fontsize=20)
         plt.grid(True)
+    return(KO_spins)
         
 def KO_plotLogFC_ExpAndSim(lofFC_Exp, logFC_Sim, KO_genes_order):
     """Plot the logFC of the experiment and the simulated data
@@ -210,3 +213,63 @@ def KO_comparison_ExpVsSim(lofFC_Exp, logFC_Sim, N_test=100):
     if check.size > 0:
         print("Error in comparison Exp and Sim")
     return(mean_in_agreement,    data_considered)
+
+# ---------------------------- (For 3 KO genes) --------------------------------
+def KO_activity_sim(matx, field,genes_order, model, N_test_KO=100, n_time=9547):
+    """(For 3 KO genes)
+    Compute the activity of the simulated data N_test_KO times 
+    args:
+    - matx(numpy array): interaction matrix
+    - field(numpy array): field values
+    - genes_order(list of strings): list of genes in the order of the interaction matrix
+    - model(): model using ml_wrapper
+    - N_test_KO(int): number of times the simulation is performed
+    
+    output: 
+    - KO_spins(numpy array): activity of the simulated data, array of size (n_genes, n_spins, n_sim)
+    - KO_avg_spin(numpy array): average activity of the simulated data, array of size (n_genes, n_sim)
+    - KO_std_spin(numpy array): std activity of the simulated data, array of size (n_genes, n_sim)
+    """
+    KO_spins = np.zeros((len(genes_order), n_time, N_test_KO))
+    for i in range(N_test_KO):
+        np.random.seed(i*5)
+        KO_spins[:,:,i] = model.generate_samples_SetData(matx=matx, field=field, seed=i*5)
+        KO_avg_spin = np.array(KO_spins.mean(axis=1))+1
+        KO_std_spin = np.array(KO_spins.std(axis=1))
+
+    return(KO_spins, KO_avg_spin, KO_std_spin)
+
+
+def KO_plots_SimMultiple(KO_spins, KO_genes_order, wt_avg, wt_std):
+    """(For 3 KO genes)
+    compute the average and std of the activity of the simulated data"""
+    # mean active time
+    std_temp = KO_spins.reshape((KO_spins.shape[0],KO_spins.shape[1]*KO_spins.shape[2]))
+    # KO_std_spin = np.array(KO_spins_std.mean(axis=1))
+    KO_std_spin = std_temp.std(axis=1)
+    KO_avg_spin = np.array(KO_spins.mean(axis=1))+1
+    KO_avg_spin = np.array(KO_avg_spin.mean(axis=1))
+
+    plt.figure(figsize=(18,5))
+    plt.errorbar(KO_genes_order, KO_avg_spin, yerr=KO_std_spin/np.sqrt(len(wt_std)),  
+                    alpha=1, 
+                    fmt="o", ms = 10,
+                    elinewidth=3,
+                    color="steelblue",
+                    capsize=10,
+                    label= "simulated Data")
+
+    plt.errorbar(KO_genes_order, wt_avg, yerr=wt_std/np.sqrt(len(wt_std)), 
+                    alpha=1, 
+                    fmt="o", ms = 10,
+                    elinewidth=1,
+                    color="indianred",
+                    capsize=10,
+                    label = "original data")
+    plt.legend(loc="upper left", fontsize=16)
+    plt.xticks(fontsize=12)
+    plt.ylabel("Average spin", fontsize=16)
+    plt.xlabel("Genes", fontsize=16)
+    plt.title("Average spin values for each genes", fontsize=20)
+    plt.grid(True)
+    plt.show()
