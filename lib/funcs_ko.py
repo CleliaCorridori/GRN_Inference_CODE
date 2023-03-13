@@ -14,6 +14,8 @@ from os import system
 import sys
 sys.path.append('../')
 
+from statsmodels.stats.weightstats import DescrStatsW
+
 
 from matplotlib.lines import Line2D
 from lib.ml_wrapper import asynch_reconstruction
@@ -39,9 +41,16 @@ committed = ["Dnmt3a", "Dnmt3b", "Lef1", "Otx2", "Pou3f1", "Etv5"]
 
 def plot_activity_simulated(spins_df_sim, genes_order, title, color, ax):
     # spins_df_sim is (n_genes, n_time, n_test)
-    avg_activity     = spins_df_sim.mean(axis=1).mean(axis=1)
-    avg_activity_std = spins_df_sim.std(axis=1).mean(axis=1)
-    ax.errorbar(genes_order, avg_activity, yerr=avg_activity_std/np.sqrt(spins_df_sim.shape[0]), 
+    avg_activity_each     = spins_df_sim.mean(axis=1)
+    avg_activity_std_each = spins_df_sim.std(axis=1, ddof=1)/np.sqrt(spins_df_sim.shape[1])
+    # print(avg_activity_each.shape, avg_activity_std_each.shape)
+    avg_activity = np.zeros(spins_df_sim.shape[0])
+    avg_activity_std = np.zeros(spins_df_sim.shape[0])
+    for j in range(spins_df_sim.shape[0]):
+        avg_activity[j] = DescrStatsW(avg_activity_each[j,:], weights=1/(avg_activity_std_each[j,:])**2, ddof=1).mean
+        avg_activity_std[j] = DescrStatsW(avg_activity_each[j,:], weights=1/(avg_activity_std_each[j,:])**2, ddof=1).std
+    
+    ax.errorbar(genes_order, avg_activity, yerr=avg_activity_std, 
                  alpha=1, 
                  fmt="o", ms = 10,
                  elinewidth=1,
@@ -60,7 +69,7 @@ def plot_activity(spins_df, genes_order, title, color, ax):
     # spins_df is (n_genes, n_time)
     avg_activity     = spins_df.mean(axis=1)
     avg_activity_std = spins_df.std(axis=1)
-    ax.errorbar(genes_order, avg_activity, yerr=avg_activity_std/np.sqrt(spins_df.shape[0]), 
+    ax.errorbar(genes_order, avg_activity, yerr=avg_activity_std/np.sqrt(spins_df.shape[1]), 
                  alpha=1, 
                  fmt="o", ms = 10,
                  elinewidth=1,
@@ -95,36 +104,30 @@ def info_KO(matx,model, KO_gene="Rbpj", genes_order=genes_order, multiple=False)
     KO_genes_order = np.delete(genes_order, KO_gene_idk, axis=0)
     return(KO_rec_matx, KO_rec_field, KO_gene_idk, KO_genes_order)
 
-def KO_plots_oneSim(model, matx, field, KO_genes_order, wt_avg, wt_std, seed=1, raster=True, avg=True):
+def KO_plots_oneSim(ko_spins, ko_avg, ko_std, wt_avg, wt_std, ko_genes_order, raster=True, avg=True):
     """function to simulate the KO data (active/inactive genes in time) and to plot, depending on the decision of the user, 
     the raster plot and the average active time for each gene in wild type and in KO.
     Args:
-        model (): model using ml_wrapper
-        matx (numpy array): interaction matrix
-        field (numpy array): field values
-        KO_genes_order (list of strings): list of genes in the order of the interaction matrix
-        wt_avg (numpy array): average activity of the wild type genes
-        wt_std (numpy array): average std of the wild type genes
-        seed (int, optional): seed. Defaults to 1.
-        raster (bool, optional): decide to plot the raster plot or not. Defaults to True.
-        avg (bool, optional): decide to plot the average active time for each gene in wild type and in KO. Defaults to True.
+        ko_spins (array): array of the KO data (active/inactive genes in time)
+        ko_avg (array): array of the average active time for each gene in KO
+        ko_std (array): array of the standard deviation of the active time for each gene in KO
+        wt_avg (array): array of the average active time for each gene in wild type
+        wt_std (array): array of the standard deviation of the active time for each gene in wild type
+        ko_genes_order (array): array of the genes in the same order of the KO data
+        
+        raster (bool): True if the user wants to plot the raster plot
+        avg (bool): True if the user wants to plot the average active time for each gene in wild type and in KO
     """
-    #generate new data
-    KO_spins = model.generate_samples_SetData(matx=matx, field= field, seed=seed)
-    
     # raster plot
     if raster:
-        fun_plotting.raster_plot(KO_spins, 'Reconstruction', 1, KO_genes_order)
+        fun_plotting.raster_plot(KO_spins, 'Reconstruction', 1, ko_genes_order)
         plt.show()
         
     # average activity time per gene in wild type and in KO
     if avg:
-        # mean active time
-        KO_std_spin = np.array(KO_spins.std(axis=1))
-        KO_avg_spin = np.array(KO_spins.mean(axis=1))+1
 
         plt.figure(figsize=(18,5))
-        plt.errorbar(KO_genes_order, KO_avg_spin, yerr=KO_std_spin/np.sqrt(len(wt_std)),  
+        plt.errorbar(ko_genes_order, ko_avg, yerr=ko_std,  
                      alpha=1, 
                      fmt="o", ms = 10,
                      elinewidth=3,
@@ -132,7 +135,7 @@ def KO_plots_oneSim(model, matx, field, KO_genes_order, wt_avg, wt_std, seed=1, 
                      capsize=10,
                      label= "simulated Data")
 
-        plt.errorbar(KO_genes_order, wt_avg, yerr=wt_std/np.sqrt(len(wt_std)), 
+        plt.errorbar(ko_genes_order, wt_avg, yerr=wt_std,
                      alpha=1, 
                      fmt="o", ms = 10,
                      elinewidth=1,
@@ -145,7 +148,7 @@ def KO_plots_oneSim(model, matx, field, KO_genes_order, wt_avg, wt_std, seed=1, 
         plt.xlabel("Genes", fontsize=16)
         plt.title("Average spin values for each genes", fontsize=20)
         plt.grid(True)
-    return(KO_spins)
+        plt.show()
         
 def KO_plotLogFC_ExpAndSim(lofFC_Exp, logFC_Sim, KO_genes_order):
     """Plot the logFC of the experiment and the simulated data
@@ -163,7 +166,85 @@ def KO_plotLogFC_ExpAndSim(lofFC_Exp, logFC_Sim, KO_genes_order):
     plt.xticks(np.arange(0,23),KO_genes_order)
     plt.axhline(0)
     plt.legend()
+    
+def KO_avg_weighted(matx, field, wt, model, N_test_KO=100):
+    """ Compute the average spins value for each gene in KO and in WT
+    Args:
+        matx (numpy array): interaction matrix
+        field (numpy array): field values
+        genes_order (list of strings): list of genes in the order of the interaction matrix
+        
+    """
+    # average activity for each gene in WT
+    wt_avg = np.array(wt.mean(axis=1))
+    wt_std = np.array(wt.std(axis=1, ddof=1))/np.sqrt(wt.shape[1])
+    
+    # activity for each gene in KO
+    KO_avg_spin = np.zeros((matx.shape[0], N_test_KO))
+    KO_std_spin = np.zeros((matx.shape[0], N_test_KO))
+    for i in range(N_test_KO):
+        KO_spins = model.generate_samples_SetData(matx=matx, field=field, seed=i*5)+1
+        KO_avg_spin[:,i] = np.array(KO_spins.mean(axis=1))
+        KO_std_spin[:,i] = np.array(KO_spins.std(axis=1, ddof=1))/np.sqrt(KO_spins.shape[1])
+    
+    KO_weighted_avg = np.zeros(KO_avg_spin.shape[0])
+    KO_weighted_std = np.zeros(KO_avg_spin.shape[0])    
+    for j in range(KO_avg_spin.shape[0]):
+        KO_weighted_avg[j] = DescrStatsW(KO_avg_spin[j,:], weights=1/(KO_std_spin[j,:])**2, ddof=1).mean
+        KO_weighted_std[j] = DescrStatsW(KO_avg_spin[j,:], weights=1/(KO_std_spin[j,:])**2, ddof=1).std
+        
+    return(KO_weighted_avg, KO_weighted_std, wt_avg, wt_std, KO_spins)
 
+def KO_diff_sim(KO_avg, KO_std ,wt_avg, wt_std):
+    """ Compute the differences between the average activity of the KO and the WT
+    """
+    # difference between KO and WT
+    diff_sim = KO_avg - wt_avg
+    diff_sim_std = np.sqrt(KO_std**2 + wt_std**2)
+    # for i in range(len(diff_sim)):
+    #     if np.abs(diff_sim[i])< 3*diff_sim_std[i] :
+    #         print("KO_std-wt_std not significant for gene ", i)
+
+    # diff_sim_std = np.sqrt(KO_std**2 + KO_std**2)
+    # logFC between KO and WT
+    # diff_sim = np.log2(KO_avg/ wt_avg)
+    # diff_sim_std = np.sqrt((wt_avg/(KO_avg*np.log(2)))**2 * (KO_std**2+wt_std**2))
+
+    return(diff_sim, diff_sim_std)
+
+def KO_diff_ExpVsSim(logFC_Exp, diff_Sim, diff_Sim_std, genes_order = genes_order):
+    """compute the fraction of Experimental Data end Simulated data in Agreement
+    lofFC_Exp: difference of the experiment, array of size (n_genes)
+    logFC_Sim: difference of the simulated data, array of size (n_genes)
+    
+    output:
+    in_agreement: fraction of Experimental Data end Simulated data in Agreement
+    data_considered: number of genes considered in the comparison"""
+    comparison= np.array(np.sign(logFC_Exp)*np.sign(diff_Sim))
+    index_logFC_Exp = np.where(logFC_Exp==0)[0]
+    index_diffSim = np.where((np.abs(diff_Sim))<3*diff_Sim_std)[0]
+    print("KO_std-wt_std not significant for gene ", genes_order[index_diffSim])
+
+
+    # union of the two indexes
+    idx_notAcc = np.union1d(index_logFC_Exp, index_diffSim)
+    # find the indexes of the genes that are not in idx_notAcc
+    idx_Acc = np.setdiff1d(np.arange(len(logFC_Exp)), idx_notAcc)
+    data_considered = len(idx_Acc)
+    
+    # consider the comparinson elements that are not in idx_notAcc
+    comparison_sel = comparison[idx_Acc]
+    
+    in_agreement = len(np.where(comparison_sel==1)[0])/data_considered
+    no_agreement = len(np.where(comparison_sel==-1)[0])/data_considered
+    
+    # Check
+    check_sum = in_agreement+no_agreement-1
+    check = np.where(check_sum>0.001)[0]
+    if check.size > 0:
+        print("Error in comparison Exp and Sim")
+        
+    return(in_agreement, data_considered, genes_order[idx_Acc])
     
 def KO_logFC_sim(matx, field,genes_order,wt_avg, model, N_test_KO=100):
     """Compute LogFC for SIMULATED data
@@ -181,11 +262,11 @@ def KO_logFC_sim(matx, field,genes_order,wt_avg, model, N_test_KO=100):
     for i in range(N_test_KO):
         KO_spins = model.generate_samples_SetData(matx=matx, field=field, seed=i*5)
         KO_avg_spin = np.array(KO_spins.mean(axis=1))+1
-        KO_std_spin = np.array(KO_spins.std(axis=1))
+        KO_std_spin = np.array(KO_spins.std(axis=1), ddof=1)
 
         # Comparison
-        diff_sim[:,i] = np.log2(KO_avg_spin/wt_avg)
-    #     diff_sim = KO_pN_mb_pst_avg_spin-wt_pN_mb_pst_avg_spin
+        # diff_sim[:,i] = np.log2(KO_avg_spin/wt_avg)
+        diff_sim[:,i] = KO_avg_spin-wt_avg
 #         diff_sim_ii[np.abs(diff_sim_ii)<np.max(np.abs(diff_sim_ii))*thr_KO]=0    # set the threshold
 #         diff_sim[:,i] = diff_sim_ii
     return(diff_sim)
@@ -212,10 +293,11 @@ def KO_comparison_ExpVsSim(lofFC_Exp, logFC_Sim, N_test=100):
     check = np.where(check_sum>0.001)[0]
     if check.size > 0:
         print("Error in comparison Exp and Sim")
+        
     return(mean_in_agreement,    data_considered)
 
 # ---------------------------- (For 3 KO genes) --------------------------------
-def KO_activity_sim(matx, field,genes_order, model, N_test_KO=100, n_time=9547):
+def KO_activity_sim(matx, field, genes_order, model, N_test_KO=100, n_time=9547):
     """(For 3 KO genes)
     Compute the activity of the simulated data N_test_KO times 
     args:
@@ -227,31 +309,50 @@ def KO_activity_sim(matx, field,genes_order, model, N_test_KO=100, n_time=9547):
     
     output: 
     - KO_spins(numpy array): activity of the simulated data, array of size (n_genes, n_spins, n_sim)
-    - KO_avg_spin(numpy array): average activity of the simulated data, array of size (n_genes, n_sim)
-    - KO_std_spin(numpy array): std activity of the simulated data, array of size (n_genes, n_sim)
     """
     KO_spins = np.zeros((len(genes_order), n_time, N_test_KO))
+
     for i in range(N_test_KO):
         np.random.seed(i*5)
         KO_spins[:,:,i] = model.generate_samples_SetData(matx=matx, field=field, seed=i*5)
-        KO_avg_spin = np.array(KO_spins.mean(axis=1))+1
-        KO_std_spin = np.array(KO_spins.std(axis=1))
+    return(KO_spins)
 
-    return(KO_spins, KO_avg_spin, KO_std_spin)
+def KO3_avg_weighted(ko, wt, N_test_KO=100):
+    """ Compute the average spins value for each gene in KO and in WT
+    Args:
+    - ko(numpy array): activity of the simulated data, array of size (n_genes, n_times, n_sim)
+    - wt(numpy array): activity of the wild type data, array of size (n_genes, n_times)
+    - N_test_KO(int): number of times the simulation is performed
+        
+    """
+    # average activity for each gene in WT
+    wt_avg = np.array(wt.mean(axis=1))
+    wt_std = np.array(wt.std(axis=1, ddof=1))/np.sqrt(wt.shape[1])
+    
+    # activity for each gene in KO
+    KO_avg_spin = np.zeros((ko.shape[0], N_test_KO))
+    KO_std_spin = np.zeros((ko.shape[0], N_test_KO))
+    print(KO_avg_spin.shape)
+    KO_spins = ko + 1
+    
+    for i in range(N_test_KO):
+        KO_avg_spin[:,i] = np.array(KO_spins[:,:,i].mean(axis=1))
+        KO_std_spin[:,i] = np.array(KO_spins[:,:,i].std(axis=1, ddof=1))/np.sqrt(KO_spins[:,:,i].shape[1])
+    
+    KO_weighted_avg = np.zeros(KO_avg_spin.shape[0])
+    KO_weighted_std = np.zeros(KO_avg_spin.shape[0])    
+    for j in range(KO_avg_spin.shape[0]):
+        KO_weighted_avg[j] = DescrStatsW(KO_avg_spin[j,:], weights=1/(KO_std_spin[j,:])**2, ddof=1).mean
+        KO_weighted_std[j] = DescrStatsW(KO_avg_spin[j,:], weights=1/(KO_std_spin[j,:])**2, ddof=1).std
+        
+    return(KO_weighted_avg, KO_weighted_std, wt_avg, wt_std)
 
 
-def KO_plots_SimMultiple(KO_spins, KO_genes_order, wt_avg, wt_std):
+def KO_plots_SimMultiple(ko_avg, ko_std, wt_avg, wt_std, KO_genes_order):
     """(For 3 KO genes)
-    compute the average and std of the activity of the simulated data"""
-    # mean active time
-    std_temp = KO_spins.reshape((KO_spins.shape[0],KO_spins.shape[1]*KO_spins.shape[2]))
-    # KO_std_spin = np.array(KO_spins_std.mean(axis=1))
-    KO_std_spin = std_temp.std(axis=1)
-    KO_avg_spin = np.array(KO_spins.mean(axis=1))+1
-    KO_avg_spin = np.array(KO_avg_spin.mean(axis=1))
-
+    plot the average activity of the simulated data and the original data"""
     plt.figure(figsize=(18,5))
-    plt.errorbar(KO_genes_order, KO_avg_spin, yerr=KO_std_spin/np.sqrt(len(wt_std)),  
+    plt.errorbar(KO_genes_order, ko_avg, yerr=ko_std,  
                     alpha=1, 
                     fmt="o", ms = 10,
                     elinewidth=3,
@@ -259,7 +360,7 @@ def KO_plots_SimMultiple(KO_spins, KO_genes_order, wt_avg, wt_std):
                     capsize=10,
                     label= "simulated Data")
 
-    plt.errorbar(KO_genes_order, wt_avg, yerr=wt_std/np.sqrt(len(wt_std)), 
+    plt.errorbar(KO_genes_order, wt_avg, yerr=wt_std,
                     alpha=1, 
                     fmt="o", ms = 10,
                     elinewidth=1,
