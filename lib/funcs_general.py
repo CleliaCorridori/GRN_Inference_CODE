@@ -76,8 +76,9 @@ def check_shuffle(dataset, Ntest):
     check_eq = 0
     for ii in range(Ntest):
         for jj in range(ii+1, Ntest):
-            temp = len(np.where(np.abs(dataset[ii,:,:]-dataset[jj,:,:])<0.01)[0]) # number of equal elements
-            if temp > 0.7*dataset.shape[1]*dataset.shape[2]: # if more than 70% of the elements are equal
+            # number of equal elements
+            temp = len(np.where(np.abs(dataset[ii,:,:]-dataset[jj,:,:])<0.001)[0]) # number of equal elements
+            if temp > 0.9*dataset.shape[1]*dataset.shape[2]: # if more than 70% of the elements are equal
                 check_eq += 1 # count the number of equal elements
     return(check_eq/(Ntest*(Ntest-1))*2) # percentage of equal elements
 
