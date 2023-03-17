@@ -214,7 +214,7 @@ def KO_diff_sim(KO_avg, KO_std ,wt_avg, wt_std, thr_significance=3):
     for i in range(len(diff_sim)):
         # print(i, np.abs(diff_sim[i])- thr_significance*diff_sim_std[i])
         if np.abs(diff_sim[i])<thr_significance*diff_sim_std[i]:
-            # print("The difference between the average activity of the KO and the WT is not significant for gene ", i)
+            print("The difference between the average activity of the KO and the WT is not significant for gene ", i)
             not_significant.append(i)
     # diff_sim_std = np.sqrt(KO_std**2 + KO_std**2)
     # logFC between KO and WT
