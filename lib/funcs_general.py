@@ -33,8 +33,66 @@ naive = ["Klf4", "Klf2", "Esrrb", "Tfcp2l1", "Tbx3", "Stat3", "Nanog", "Sox2"]
 formative = ["Nr0b1", "Zic3", "Rbpj", "Utf1", "Etv4", "Tcf15"]
 committed = ["Dnmt3a", "Dnmt3b", "Lef1", "Otx2", "Pou3f1", "Etv5"]
 
+# ------------------------------ average gene expression ------------------------------
+def average_ge_in_time(df, time_sep, genes_type_name, genes_type, title, plot_avg=True):
+    """ Compute the average expression of the different gropus of genes in the different time steps and plot the result
+    Args: 
+        df (dataframe): dataframe with the gene expression
+        time_sep (list of ints): list with the number of time steps for each time point
+        genes_type_name (list of strings): list with the name of the groups of genes
+        genes_type (list of lists): list of lists of genes for each group
+        title (string): title of the plot
+        plot_avg (bool): if True returns the plot 
+    """
+    df_bulk = pd.concat([df.iloc[:,:time_sep[0]].mean(axis=1), df.iloc[:, time_sep[0]: np.sum(time_sep[:2])].mean(axis=1), df.iloc[:, np.sum(time_sep[:2]): np.sum(time_sep[:3])].mean(axis=1), df.iloc[:, np.sum(time_sep[:3]): np.sum(time_sep[:4])].mean(axis=1), df.iloc[:, np.sum(time_sep[:4]): np.sum(time_sep[:5])].mean(axis=1)], 
+                        axis=1)
+    df_bulk.columns=["00", "06","12", "24", "48"]
+    df_bulk_groups = pd.DataFrame(index=genes_type_name, columns=df_bulk.columns)
+    for ii in range(len(genes_type_name)):
+        df_bulk_groups.iloc[ii,:] = df_bulk.loc[genes_type[ii]].mean(axis=0)
+    # compute the std for each time step for each group of genes (naive, formative, committed)
+    df_std = pd.concat([df.iloc[:,:time_sep[0]].std(axis=1), df.iloc[:, time_sep[0]: np.sum(time_sep[:2])].std(axis=1), df.iloc[:, np.sum(time_sep[:2]): np.sum(time_sep[:3])].std(axis=1), df.iloc[:, np.sum(time_sep[:3]): np.sum(time_sep[:4])].std(axis=1), df.iloc[:, np.sum(time_sep[:4]): np.sum(time_sep[:5])].std(axis=1)], axis=1)
+    df_std.columns=["00", "06","12", "24", "48"]
+    df_std_groups = pd.DataFrame(index=genes_type_name, columns=df_bulk.columns)
+    df_std_groups.columns=df_bulk.columns
+    
+    for ii in range(len(genes_type_name)):
+        df_std_groups.iloc[ii,:] = df_std.loc[genes_type[ii]].mean(axis=0)
+    
+    if plot_avg:
+        plt.figure(figsize=(12,8))
+        plt.errorbar(df_bulk_groups.columns, df_bulk_groups.iloc[0,:], yerr=df_std_groups.iloc[0,:], color='darkblue', label='naive', marker='o')
+        plt.errorbar(df_bulk_groups.columns, df_bulk_groups.iloc[1,:], yerr=df_std_groups.iloc[1,:], color='darkgreen', label='formative', marker='o')
+        plt.errorbar(df_bulk_groups.columns, df_bulk_groups.iloc[2,:], yerr=df_std_groups.iloc[2,:], color='darkred', label='committed', marker='o')
+        plt.legend(fontsize=15)
+        plt.xlabel('Time', fontsize=15)
+        plt.ylabel('Average expression', fontsize=15)
+        plt.title('Average expression per group', fontsize=18)
+        plt.grid()
+        plt.ylim([0,1.75])
+        plt.title(title, fontsize=18)
+        plt.show()
+    return(df_bulk_groups, df_std_groups, df_bulk, df_std)
 
-# ------------------------------ binnarization
+def plot_ge_in_time(df_bulk, df_std, genes_type, title):
+    """Plot the gene expression for each gene in each group in time with theis std
+
+    Args:
+        df_bulk (dataframe): average gene expression for each gene in each group in time
+        df_std (dataframe): std of the gene expression for each gene in each group in time
+        genes_type (list of lists): list of lists of genes for each group
+        title (list of strings): list of strings with the title for each group
+    """
+    for ii in range(len(genes_type)):
+        plt.figure(figsize=(12,8))
+        for jj in range(len(genes_type[ii])):
+            plt.errorbar(df_bulk.columns,df_bulk.loc[genes_type[ii][jj]].T, yerr=df_std.loc[genes_type[ii][jj]].T, label=genes_type[ii][jj], marker='o')
+        plt.legend(fontsize=16)
+        plt.title(title[ii], fontsize=20)
+        plt.grid()
+        plt.show()
+
+# ------------------------------ binnarization ----------------------------------------
 def binnarization(df, thr=0.5, genes_order=[]):
     """ Binarize the values of a DataFrame based on a threshold
     input: 
