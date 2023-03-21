@@ -65,10 +65,12 @@ def shuffle_dataframe(df, genes_names, interactions, N_test=500, Nbin=30, inferr
         # Pearson matrix
         if method == "Pearson":
             corr_matr = np.corrcoef(trial_long)
+            np.fill_diagonal(corr_matr, float("Nan")) # fill the diagonal with NaN
         elif method == "MaxEnt":
             corr_matr = -np.linalg.pinv(np.corrcoef(trial_long))
-        np.fill_diagonal(corr_matr, float("Nan")) # fill the diagonal with NaN
-
+            # corr_matr = corr_matr/np.nanmax(np.abs(corr_matr))
+            np.fill_diagonal(corr_matr, float("Nan")) # fill the diagonal with NaN
+            
         # save all the correlation values
         corr_matrices[ii] = corr_matr
 
@@ -76,7 +78,6 @@ def shuffle_dataframe(df, genes_names, interactions, N_test=500, Nbin=30, inferr
                                                        inferred_int_thr=inferred_int_thr, Norm_Matx = False,
                                                        data_type=" Best model for lN PST MB data",
                                                        figplot=False, verbose=False, nbin=Nbin, Norm = False)
-
     return(TP_frac_rnd, info_int_rnd, corr_matrices)
 
 

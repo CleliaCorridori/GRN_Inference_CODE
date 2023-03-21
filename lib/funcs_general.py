@@ -2,23 +2,19 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib
-from scipy import stats
-from scipy.optimize import curve_fit
-from scipy.stats import norm
-from scipy.stats import spearmanr
-import networkx as nx
-from sklearn.preprocessing import MinMaxScaler
+# from scipy import stats
+# from scipy.optimize import curve_fit
+# from scipy.stats import norm
+# from scipy.stats import spearmanr
+# import networkx as nx
+# from sklearn.preprocessing import MinMaxScaler
 import seaborn as sns
 import os
 from os import system
 import sys
 sys.path.append('../')
 
-
-from matplotlib.lines import Line2D
-from lib.ml_wrapper import asynch_reconstruction
 import lib.figs_funcs as figfunc
-import lib.funcs_raster as funcs_raster
 
 # ------------------------------
 # ------ GENERAL FUNCTIONS ------
@@ -168,7 +164,7 @@ def TP_check(interaction_list, interaction_matrix, genes_list, inferred_int_thr 
             - row 3: 1 if the interaction is correctly inferred, 0 otherwise.
     """
     if Norm:
-        m_max = np.max(np.abs(interaction_matrix))
+        m_max = np.nanmax(np.abs(interaction_matrix))
     else:
         m_max = 1
     
@@ -231,7 +227,7 @@ def TP_plot(interaction_list, interaction_matrix, genes_order, inferred_int_thr=
     """
     
     if Norm_Matx:
-        interaction_matrix= interaction_matrix/np.nanmax(np.abs(interaction_matrix))
+        interaction_matrix = interaction_matrix/np.nanmax(np.abs(interaction_matrix))
 
     # Check the list of known interactions correctly inferred
     TP_fraction, TP_info = TP_check(interaction_list, interaction_matrix, genes_order, inferred_int_thr, Norm=Norm)
