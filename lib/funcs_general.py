@@ -16,6 +16,10 @@ sys.path.append('../')
 
 import lib.figs_funcs as figfunc
 
+matplotlib.rc('text', usetex=True)
+sns.set(font='Avenir')
+sns.set(style="white")
+
 # ------------------------------
 # ------ GENERAL FUNCTIONS ------
 path = "/Users/cleliacorridori/Dropbox_2021 Dropbox/Jorah Mormont/GRN_Inference/DATA/" # for Mac
@@ -168,9 +172,9 @@ def TP_check(interaction_list, interaction_matrix, genes_list, inferred_int_thr 
     else:
         m_max = 1
     
-    true_positive=0
-    int_val = np.zeros(len(interaction_list))
-    wrong_ints = []
+    # true_positive=0
+    # int_val = np.zeros(len(interaction_list))
+    # wrong_ints = []
     out_matx = np.zeros((4, len(interaction_list)))
     
     for ii in range(len(interaction_list)): # split the list of strings

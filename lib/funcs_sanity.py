@@ -11,7 +11,9 @@ from scipy.stats import norm
 import sys
 sys.path.append('../')
 
-
+matplotlib.rc('text', usetex=True)
+sns.set(font='Avenir')
+sns.set(style="white")
 
 # ------------------------------
 # ------ GENERAL FUNCTIONS ------
@@ -31,7 +33,7 @@ committed = ["Dnmt3a", "Dnmt3b", "Lef1", "Otx2", "Pou3f1", "Etv5"]
 # ------------------------------------------  PEARSON ------------------------------------------
 # ----------------------------------------------------------------------------------------------
 
-def shuffle_dataframe(df, genes_names, interactions, N_test=500, Nbin=30, inferred_int_thr=0.02, method="Pearson"):
+def shuffle_dataframe(df, genes_names, interactions, N_test=500, Nbin=30, inferred_int_thr=0.03, method="Pearson"):
     """ Shuffle the dataframe and compute the Pearson correlation matrix.
 
     Args:
@@ -51,6 +53,7 @@ def shuffle_dataframe(df, genes_names, interactions, N_test=500, Nbin=30, inferr
     val_rnd = np.array(trial.iloc[:,1]) #gene expression values
     # Create an array of zeros to save the correlation matrices
     corr_matrices  = np.zeros((N_test,len(genes_names), len(genes_names)))
+    corr_matrices_no_diag  = np.zeros((N_test,len(genes_names), len(genes_names)))
     TP_frac_rnd = np.zeros(N_test)
     info_int_rnd= np.zeros((N_test, 4, len(interactions)))
 
@@ -65,20 +68,24 @@ def shuffle_dataframe(df, genes_names, interactions, N_test=500, Nbin=30, inferr
         # Pearson matrix
         if method == "Pearson":
             corr_matr = np.corrcoef(trial_long)
-            np.fill_diagonal(corr_matr, float("Nan")) # fill the diagonal with NaN
+            corr_matr_no_diag = corr_matr.copy()
+            np.fill_diagonal(corr_matr_no_diag, float("Nan")) # fill the diagonal with NaN
         elif method == "MaxEnt":
             corr_matr = -np.linalg.pinv(np.corrcoef(trial_long))
-            # corr_matr = corr_matr/np.nanmax(np.abs(corr_matr))
-            np.fill_diagonal(corr_matr, float("Nan")) # fill the diagonal with NaN
+            corr_matr_no_diag = corr_matr.copy()
+            np.fill_diagonal(corr_matr_no_diag, float("Nan")) # fill the diagonal with NaN
+            # print("Post-max:", np.nanmax(np.abs(corr_matr)))
+            
             
         # save all the correlation values
         corr_matrices[ii] = corr_matr
+        corr_matrices_no_diag[ii] = corr_matr_no_diag
 
         TP_frac_rnd[ii], info_int_rnd[ii,:,:], _ = funcs_general.TP_plot(interactions, corr_matr, genes_names, 
                                                        inferred_int_thr=inferred_int_thr, Norm_Matx = False,
                                                        data_type=" Best model for lN PST MB data",
                                                        figplot=False, verbose=False, nbin=Nbin, Norm = False)
-    return(TP_frac_rnd, info_int_rnd, corr_matrices)
+    return(TP_frac_rnd, info_int_rnd, corr_matrices_no_diag)
 
 
 def plot_TP_fraction(TP_frac_rnd, true_frac=0.67, text="PST+MB"):
@@ -103,7 +110,7 @@ def plot_TP_fraction(TP_frac_rnd, true_frac=0.67, text="PST+MB"):
     ax.set_ylabel('TP fraction', fontsize=16)
     ax.set_title('TP inferred', fontsize=16)
     ax.set_ylim([0,1])
-    ax.axhline(0.67, color="darkred")
+    ax.axhline(true_frac, color="darkred")
     plt.show()
 
 
