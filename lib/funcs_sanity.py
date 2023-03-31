@@ -183,5 +183,77 @@ def fit_normal_distribution(data, noise_thr=3, text="", Nbins=19):
     return(std*noise_thr)
 
 # ----------------------------------------------------------------------------------------------
-# ------------------------------------------  MaxEnt  ------------------------------------------
+# ------------------------------  single known interaction Check  ------------------------------
 # ----------------------------------------------------------------------------------------------
+def TP_distribution(interaction_list, interaction_matrices, genes_list):
+
+    int_val = np.zeros((len(interaction_list), interaction_matrices.shape[0]))
+    for ii in range(len(interaction_list)):
+        couple = interaction_list[ii].split(" ")
+        gene1_idx = np.where(genes_list == couple[1])[0] #idx of gene 1 (target)
+        gene0_idx = np.where(genes_list == couple[0])[0] #idx of gene 0 (source)
+            
+        # Get the interaction value and the sign of the interaction
+        int_val[ii,:] = interaction_matrices[:,gene1_idx[0], gene0_idx[0]]
+
+
+    return(int_val)
+
+def single_int_check(TPtrial_list, corr_matrices_df_spec, info_int_spec, genes_order, text=""):
+    # Compute the distribution of the shuffled interactions
+    interactions_shuffled = TP_distribution(TPtrial_list, corr_matrices_df_spec, genes_order)
+    
+    # Create a figure with 3 columns and 6 rows
+    fig, axs = plt.subplots(3, 6, figsize=(30,15))
+
+    # Create a list to store the histograms
+    histograms = []
+    
+    # Iterate over the rows and columns of the subplot to compute the histograms
+    for ii in range(info_int_spec.shape[1]):
+        quant = np.quantile(interactions_shuffled[ii,:],[0.01, 0.5, 0.99])
+        # Compute the histogram
+        bins_thr = max(np.abs(quant[0]), quant[2] )
+        bins = np.linspace(-bins_thr-0.55*bins_thr, bins_thr+0.55*bins_thr, 15)
+        nn, bins_J, _ = plt.hist(interactions_shuffled[ii,:], bins=bins, density=True, alpha=0.6, color='white')
+        centroids_J = (bins_J[1:] + bins_J[:-1]) / 2
+        
+        # Store the histogram in the list
+        histograms.append((centroids_J, nn))
+        
+    # Iterate over the histograms to plot them in the main loop
+    check = len(TPtrial_list)
+    for ii, (centroids_J, nn) in enumerate(histograms):
+        perc_plot = np.quantile(interactions_shuffled[ii,:],[0.01, 0.5, 0.99])
+        # Compute the histogram
+        bins_thr = max(np.abs(perc_plot[0]), perc_plot[2] )
+        # Get the axis object for the current subplot
+        ax = axs[ii // 6, ii % 6]
+        # comute the 5-th and 95-th percentile
+        quant = np.quantile(interactions_shuffled[ii,:],[0.05, 0.5, 0.95])
+        # Plot the histogram
+        ax.axvline(x=info_int_spec[2,ii], color="red", lw=5, label="Real Data")
+        ax.set_title(TPtrial_list[ii], fontsize=24)
+        ax.axvline(x=quant[0], color="orange", lw=3, label="5-th and 95-th percentile")
+        ax.axvline(x=quant[2], color="orange", lw=3)
+        ax.tick_params(axis='both', which='major', labelsize=20)
+        ax.text(-0.85*bins_thr, np.max(nn)*0.9, np.round(info_int_spec[2,ii],2), fontsize=22, ha="center",weight='bold')
+        ax.set_xlim([-bins_thr-0.55*bins_thr, bins_thr+0.55*bins_thr])
+        
+        # Plot the histogram
+        ax.plot(centroids_J, nn, color="navy", lw=4)
+        
+        # 5-th and 95-th percentile
+        # print("5-th and 95-th percentile: ", quant[0], quant[2])
+        if (info_int_spec[2,ii]>=quant[0]) and (info_int_spec[2,ii]<=quant[2]):
+            print("IN random: ", TPtrial_list[ii], info_int_spec[2,ii])
+            check -= 1
+    plt.legend( fontsize=16,bbox_to_anchor=(1.01, 1))
+    # general title using an input text "text"
+    fig.suptitle(text, fontsize=27)   
+        
+
+    # Show the figure
+    plt.show()
+
+    

@@ -1,26 +1,9 @@
-import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
-import matplotlib
-from scipy import stats
-from scipy.optimize import curve_fit
-from scipy.stats import norm
-from scipy.stats import spearmanr
-import networkx as nx
-from sklearn.preprocessing import MinMaxScaler
-import seaborn as sns
-import os
-from os import system
 import sys
 sys.path.append('../')
 
 from statsmodels.stats.weightstats import DescrStatsW
-
-
-from matplotlib.lines import Line2D
-from lib.ml_wrapper import asynch_reconstruction
-import lib.figs_funcs as figfunc
-import lib.funcs_raster as funcs_raster
 import lib.fun_plotting as fun_plotting
 
 # ------------------------------
@@ -42,18 +25,31 @@ committed = ["Dnmt3a", "Dnmt3b", "Lef1", "Otx2", "Pou3f1", "Etv5"]
 # -------------------------------------------------------------------------------------------------
 
 def plot_activity_simulated(spins_df_sim, genes_order, title, color, ax):
+    """ Compute the average activity of the genes in the simulated dataset and their standard deviation.
+    Plot the average activity of the genes in the simulated dataset.
+    Input:
+        - spins_df_sim (array): simulated dataset
+        - genes_order (list): list of genes names
+        - title (str): title of the plot
+        - color (str): color of the data
+        - ax (axis): axis of the plot
+    Output:
+        - avg_activity (array): average activity of the genes in the simulated dataset
+        - avg_activity_std (array): standard deviation of the average activity of the genes in the simulated dataset
+        
+    NOTES: The standard deviation is computed condidering all the data (i.e. all the time steps, all the tests)
+    and dividing by the square root of the number of tests.
+        """
     # spins_df_sim is (n_genes, n_time, n_test)
     avg_activity_each     = spins_df_sim.mean(axis=1)
-    avg_activity_std_each = spins_df_sim.std(axis=1, ddof=1)/np.sqrt(spins_df_sim.shape[1])
     # print(avg_activity_each.shape, avg_activity_std_each.shape)
     avg_activity = np.zeros(spins_df_sim.shape[0])
     avg_activity_std = np.zeros(spins_df_sim.shape[0])
     for j in range(spins_df_sim.shape[0]):
-        # avg_activity[j] = DescrStatsW(avg_activity_each[j,:], weights=1/(avg_activity_std_each[j,:])**2, ddof=1).mean
         # avg_activity_std[j] = DescrStatsW(avg_activity_each[j,:], weights=1/(avg_activity_std_each[j,:])**2, ddof=1).std
         avg_activity[j] = np.mean(avg_activity_each[j,:])
-        avg_activity_std[j] = np.std(avg_activity_each[j,:], ddof=1)
-    
+        avg_activity_std[j] = np.std(spins_df_sim[j,:,:], ddof=1)/np.sqrt(spins_df_sim.shape[2])
+
     ax.errorbar(genes_order, avg_activity, yerr=avg_activity_std, 
                  alpha=1, 
                  fmt="o", ms = 10,
@@ -61,18 +57,29 @@ def plot_activity_simulated(spins_df_sim, genes_order, title, color, ax):
                  color=color,
                  capsize=10,
                  label = title)
-    ax.legend(loc="upper left", fontsize=16)
-    # ax.set_xticks(fontsize=12)
-    ax.set_ylabel("Average spin", fontsize=16)
-    ax.set_xlabel("Genes", fontsize=16)
+    ax.legend(loc="upper left", fontsize=20)
+    ax.set_ylabel("Average spin", fontsize=20)
+    ax.set_xlabel("Genes", fontsize=20)
     ax.set_title(title, fontsize=20)
     ax.grid(True)
     return(avg_activity, avg_activity_std)
 
 def plot_activity(spins_df, genes_order, title, color, ax):
+    """ Compute the average activity of the genes in the EXPERIMENTAL dataset and their standard deviation.
+    Input:
+        - spins_df (array): experimental dataset
+        - genes_order (list): list of genes names
+        - title (str): title of the plot
+        - color (str): color of the data
+        -  ax (axis): axis of the plot
+    Output:
+        - avg_activity (array): average activity of the genes in the experimental dataset
+        - avg_activity_std (array): standard deviation of the average activity of the genes in the experimental dataset.
+    """
     # spins_df is (n_genes, n_time)
     avg_activity     = spins_df.mean(axis=1)
-    avg_activity_std = spins_df.std(axis=1)/np.sqrt(spins_df.shape[1])
+    avg_activity_std = spins_df.std(axis=1)/np.sqrt(2000) #np.sqrt(spins_df.shape[1])
+
     ax.errorbar(genes_order, avg_activity, yerr=avg_activity_std, 
                  alpha=1, 
                  fmt="o", ms = 10,
@@ -80,10 +87,10 @@ def plot_activity(spins_df, genes_order, title, color, ax):
                  color=color,
                  capsize=10,
                  label = title)
-    ax.legend(loc="upper left", fontsize=16)
+    ax.legend(loc="upper left", fontsize=20)
     # ax.set_xticks(fontsize=12)
-    ax.set_ylabel("Average spin", fontsize=16)
-    ax.set_xlabel("Genes", fontsize=16)
+    ax.set_ylabel("Average spin", fontsize=20)
+    ax.set_xlabel("Genes", fontsize=20)
     ax.set_title(title, fontsize=20)
     ax.grid(True)
     return(avg_activity, avg_activity_std)
