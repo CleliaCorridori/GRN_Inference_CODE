@@ -1,6 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import sys
+import matplotlib.colors as pltcolors
 sys.path.append('../')
 
 from statsmodels.stats.weightstats import DescrStatsW
@@ -41,7 +42,7 @@ def plot_activity_simulated(spins_df_sim, genes_order, title, color, ax):
     and dividing by the square root of the number of tests.
         """
     # spins_df_sim is (n_genes, n_time, n_test)
-    avg_activity_each     = spins_df_sim.mean(axis=1)
+    avg_activity_each = spins_df_sim.mean(axis=1)
     # print(avg_activity_each.shape, avg_activity_std_each.shape)
     avg_activity = np.zeros(spins_df_sim.shape[0])
     avg_activity_std = np.zeros(spins_df_sim.shape[0])
@@ -78,7 +79,7 @@ def plot_activity(spins_df, genes_order, title, color, ax):
     """
     # spins_df is (n_genes, n_time)
     avg_activity     = spins_df.mean(axis=1)
-    avg_activity_std = spins_df.std(axis=1)/np.sqrt(2000) #np.sqrt(spins_df.shape[1])
+    avg_activity_std = spins_df.std(axis=1)/np.sqrt(spins_df.shape[1])
 
     ax.errorbar(genes_order, avg_activity, yerr=avg_activity_std, 
                  alpha=1, 
@@ -121,7 +122,7 @@ def info_KO(matx,model, KO_gene="Rbpj", genes_order=genes_order, multiple=False)
     KO_genes_order = np.delete(genes_order, KO_gene_idk, axis=0)
     return(KO_rec_matx, KO_rec_field, KO_gene_idk, KO_genes_order)
 
-def KO_plots_oneSim(ko_spins, ko_avg, ko_std, wt_avg, wt_std, ko_genes_order, raster=True, avg=True):
+def KO_plots_oneSim(ko_spins, ko_avg, ko_std, wt_avg, wt_std, ko_genes_order, exp_data, raster=True, avg=True):
     """function to simulate the KO data (active/inactive genes in time) and to plot, depending on the decision of the user, 
     the raster plot and the average active time for each gene in wild type and in KO.
     Args:
@@ -142,8 +143,8 @@ def KO_plots_oneSim(ko_spins, ko_avg, ko_std, wt_avg, wt_std, ko_genes_order, ra
         
     # average activity time per gene in wild type and in KO
     if avg:
-        plt.figure(figsize=(18,5))
-        plt.errorbar(ko_genes_order, ko_avg, yerr=ko_std,  
+        fig, ax = plt.subplots(3, 1, figsize=(20,10), gridspec_kw={'height_ratios': [10,0.5,0.2]})
+        ax[0].errorbar(ko_genes_order, ko_avg, yerr=ko_std,
                      alpha=1, 
                      fmt="o", ms = 10,
                      elinewidth=3,
@@ -151,57 +152,76 @@ def KO_plots_oneSim(ko_spins, ko_avg, ko_std, wt_avg, wt_std, ko_genes_order, ra
                      capsize=10,
                      label= "Simulated KO Data")
 
-        plt.errorbar(ko_genes_order, wt_avg, yerr=wt_std,
+        ax[0].errorbar(ko_genes_order, wt_avg, yerr=wt_std,
                      alpha=1, 
                      fmt="o", ms = 10,
                      elinewidth=1,
                      color="indianred",
                      capsize=10,
                      label = "Simulated WT Data")
-        plt.legend(loc="upper left", fontsize=16)
-        plt.xticks(fontsize=12)
-        plt.ylabel("Average spin", fontsize=16)
-        plt.xlabel("Genes", fontsize=16)
-        plt.title("Average spin values for each genes", fontsize=20)
-        plt.grid(True)
+        ax[0].legend(loc="upper left", fontsize=16)
+        ax[0].set_ylabel("Average spin", fontsize=16)
+        # ax[0].set_xlabel("Genes", fontsize=16)
+        ax[0].set_title("Average spin values for each genes", fontsize=20)
+        ax[0].set_xticklabels(ko_genes_order, fontsize=12)
+        ax[0].grid(True)
+
+        # add colormap below the plot showing leeb data, exp_data
+        im = ax[1].imshow(exp_data.reshape(1, exp_data.shape[0]), cmap='coolwarm', aspect='auto',
+                          norm = MidpointNormalize(midpoint=0,
+                                             vmin=-max(np.max(exp_data), np.abs(np.min(exp_data))),
+                                             vmax=max(np.max(exp_data), np.abs(np.min(exp_data)))))
+        
+        # add colorbar to ax[1] and remove the ticks 
+        ax[1].set_yticks([])
+        ax[1].set_xticks([])
+        # ax[1].set_xticks(np.arange(exp_data.shape[0]))
+        ax[1].set_xlabel("Genes", fontsize=16)
+        
+        # change the horizontal size of the image
+        ax[1].set_xlim(-1,exp_data.shape[0])
+        
+        # colorbar
+        fig.colorbar(im, cax=ax[2], orientation='horizontal', fraction=0.1, pad=0.1)
         plt.show()
+
     
-def KO_avg_weighted(matx, field, wt_spins, model, N_test_KO=100):
+def KO_avg_weighted(matx, field, wt_spins, model, N_test_KO=100, N_time =10000):
     """ Compute the average spins value for each gene in KO and in WT
     Args:
         matx (numpy array): interaction matrix
         field (numpy array): field values
         genes_order (list of strings): list of genes in the order of the interaction matrix
-        
     """
-    # average activity for each gene in WT using original data
-    # wt_avg = np.array(wt.mean(axis=1))
-    # wt_std = np.array(wt.std(axis=1, ddof=1))/np.sqrt(wt.shape[1])
-
     # activity for each gene in KO
     KO_avg_spin = np.zeros((matx.shape[0], N_test_KO))
-    KO_std_spin = np.zeros((matx.shape[0], N_test_KO))
+    KO_spins = np.zeros((matx.shape[0], N_time, N_test_KO))
+    # generate KO data
     for i in range(N_test_KO):
-        KO_spins = model.generate_samples_SetData(matx=matx, field=field, seed=i*5)+1
-        KO_avg_spin[:,i] = np.array(KO_spins.mean(axis=1))
-        KO_std_spin[:,i] = np.array(KO_spins.std(axis=1, ddof=1))/np.sqrt(KO_spins.shape[1])
+        sim_spins = model.generate_samples_SetData(matx=matx, field=field, t_size = N_time, seed=i*5)+1
+        KO_spins[:,:,i]= sim_spins
+    KO_avg_spin = KO_spins.mean(axis=1)
     
-    KO_weighted_avg = np.zeros(KO_avg_spin.shape[0])
-    KO_weighted_std = np.zeros(KO_avg_spin.shape[0])    
+    KO_avg = KO_avg_spin.mean(axis=1)
+    KO_std = np.zeros(KO_avg_spin.shape[0])    
     for j in range(KO_avg_spin.shape[0]):
-        KO_weighted_avg[j] = DescrStatsW(KO_avg_spin[j,:], weights=1/(KO_std_spin[j,:])**2, ddof=1).mean
-        KO_weighted_std[j] = DescrStatsW(KO_avg_spin[j,:], weights=1/(KO_std_spin[j,:])**2, ddof=1).std
-        
+        # KO_weighted_avg[j] = DescrStatsW(KO_avg_spin[j,:], weights=1/(KO_std_spin[j,:])**2, ddof=1).mean
+        # KO_weighted_std[j] = DescrStatsW(KO_avg_spin[j,:], weights=1/(KO_std_spin[j,:])**2, ddof=1).std
+        # KO_avg[j] = np.mean(KO_avg_spin[j,:])
+        KO_std[j] = np.std(KO_spins[j,:,:], ddof=1)/np.sqrt(KO_spins.shape[2])
+    
     # activity for each gene in WT
     wt_avg_spin = np.array(wt_spins.mean(axis=1))
-    wt_std_spin = np.array(wt_spins.std(axis=1, ddof=1))/np.sqrt(wt_spins.shape[1])
-    wt_weighted_avg = np.zeros(wt_avg_spin.shape[0])
-    wt_weighted_std = np.zeros(wt_avg_spin.shape[0])    
+    # wt_std_spin = np.array(wt_spins.std(axis=1, ddof=1))/np.sqrt(wt_spins.shape[1])
+    wt_avg = wt_avg_spin.mean(axis=1)
+    wt_std = np.zeros(wt_avg_spin.shape[0])    
     for j in range(wt_avg_spin.shape[0]):
-        wt_weighted_avg[j] = DescrStatsW(wt_avg_spin[j,:], weights=1/(wt_std_spin[j,:])**2, ddof=1).mean
-        wt_weighted_std[j] = DescrStatsW(wt_avg_spin[j,:], weights=1/(wt_std_spin[j,:])**2, ddof=1).std
+        # wt_weighted_avg[j] = DescrStatsW(wt_avg_spin[j,:], weights=1/(wt_std_spin[j,:])**2, ddof=1).mean
+        # wt_std[j] = DescrStatsW(wt_avg_spin[j,:], weights=1/(wt_std_spin[j,:])**2, ddof=1).std
+        wt_std[j] = np.std(wt_spins[j,:,:], ddof=1)/np.sqrt(wt_spins.shape[2])
         
-    return(KO_weighted_avg, KO_weighted_std, wt_weighted_avg, wt_weighted_std, KO_spins)
+    return(KO_avg, KO_std, wt_avg, wt_std, KO_spins)
+
 
 def KO_diff_sim(KO_avg, KO_std ,wt_avg, wt_std, thr_significance=3):
     """ Compute the differences between the average activity of the KO and the WT
@@ -221,7 +241,7 @@ def KO_diff_sim(KO_avg, KO_std ,wt_avg, wt_std, thr_significance=3):
     for i in range(len(diff_sim)):
         # print(i, np.abs(diff_sim[i])- thr_significance*diff_sim_std[i])
         if np.abs(diff_sim[i])<thr_significance*diff_sim_std[i]:
-            print("The difference between the average activity of the KO and the WT is not significant for gene ", i)
+            # print("The difference between the average activity of the KO and the WT is not significant for gene ", i)
             not_significant.append(i)
     # diff_sim_std = np.sqrt(KO_std**2 + KO_std**2)
     # logFC between KO and WT
@@ -246,8 +266,8 @@ def KO_diff_ExpVsSim(logFC_Exp, diff_Sim, diff_Sim_std, genes_order = genes_orde
     comparison= np.array(np.sign(logFC_Exp)*np.sign(diff_Sim))
     index_logFC_Exp = np.where(logFC_Exp==0)[0]
     index_diffSim = np.where((np.abs(diff_Sim))<thr_significance*diff_Sim_std)[0]
-    print(index_diffSim)
-    print("KO_std-wt_std not significant for gene ", genes_order[index_diffSim], index_diffSim)
+    # print(index_diffSim)
+    print("KO_std-wt_std not significant for gene ", genes_order[index_diffSim]) #, index_diffSim)
 
     # union of the two indexes
     idx_notAcc = np.union1d(index_logFC_Exp, index_diffSim)
@@ -274,8 +294,7 @@ def KO_diff_ExpVsSim(logFC_Exp, diff_Sim, diff_Sim_std, genes_order = genes_orde
     return(in_agreement, data_considered, genes_order[idx_Acc])
 
 def KO_plof_Diff_LogFC(logFC, diff, diff_std, KO_genes_order, idx_notS, title, n_sigma=1):
-    """_summary_
-
+    """ Plot the difference between the average activity of the KO and the WT and the logFC of the experiment
     Args:
         logFC (array): logFC for experimental data
         diff (array): difference between WT and KO for simulated data
@@ -295,17 +314,101 @@ def KO_plof_Diff_LogFC(logFC, diff, diff_std, KO_genes_order, idx_notS, title, n
 
     # experimental data
     plt.plot(x_range, logFC, 'o', color='Lightseagreen', label='Experimental')
-    
     # line at 0
     plt.axhline(y=0, color='black', linestyle='-', alpha=0.5)
-    
     # plot settings
     plt.xticks(x_range, KO_genes_order, rotation='vertical')
     plt.grid(which='both', axis='both')
     plt.title(title)
     plt.legend(fontsize=18)
+    plt.show()
+    
+def KO_plof_Diff_LogFC_heat(logFC, diff, diff_std, KO_genes_order, title, n_sigma=1):
+    x_range = np.arange(0, len(diff))
+    fig, ax = plt.subplots(3, 1, figsize=(20,10), gridspec_kw={'height_ratios': [10,0.5,0.2]})
 
+    # simulated data
+    ax[0].errorbar(x_range, diff, yerr=n_sigma*diff_std, fmt='o', 
+                 color='slateblue', ecolor='slateblue', elinewidth=2, 
+                 capsize=0, label='Simulated')
+    # experimental data
+    ax[0].plot(x_range, logFC, 'o', color='Lightseagreen', label='Experimental')
+    # line at 0
+    ax[0].axhline(y=0, color='black', linestyle='-', alpha=0.5)
+    
+    # plot settings
+    ax[0].set_xticks(x_range)
+    ax[0].set_xticklabels(KO_genes_order, fontsize=12, rotation='vertical')
+    ax[0].grid(which='both', axis='both')
+    ax[0].set_title(title)
+    ax[0].legend(fontsize=18)
 
+    # add colormap below the plot showing exp data
+    im = ax[1].imshow(np.array(logFC).T, cmap='coolwarm', aspect='auto', 
+                      norm = MidpointNormalize(midpoint=0,
+                                             vmin=-max(np.max(logFC), np.abs(np.min(logFC))),
+                                             vmax=max(np.max(logFC), np.abs(np.min(logFC)))))
+    # add colorbar to ax[1] and remove the ticks 
+    ax[1].set_yticks([])
+    ax[1].set_xticks([])
+    ax[1].set_xlabel("Genes", fontsize=16)
+    ax[1].set_xlim(-1,logFC.shape[0])
+
+    # colorbar
+    fig.colorbar(im, cax=ax[2], orientation='horizontal', fraction=0.1, pad=0.1)
+    plt.show()
+    
+class MidpointNormalize(pltcolors.Normalize):
+    def __init__(self, vmin=None, vmax=None, midpoint=None, clip=False):
+        self.midpoint = midpoint
+        pltcolors.Normalize.__init__(self, vmin, vmax, clip)
+
+    def __call__(self, value, clip=None):
+        x, y = [self.vmin, self.midpoint, self.vmax], [0, 0.5, 1]
+        return np.ma.masked_array(np.interp(value, x, y), np.isnan(value))
+
+def KO_heat_comparison(diff, exp_data, title, KO_genes_order):
+    fig, ax = plt.subplots(2, 1, figsize=(15,3), gridspec_kw={'height_ratios': [1,1]})
+    # simulated data
+    im0 = ax[0].imshow(diff.reshape(1, exp_data.shape[0]), cmap='coolwarm', aspect='auto')
+    # add colorbar to ax[1] and remove the ticks 
+    ax[0].set_yticks([])
+    ax[0].set_xticks([])
+    # ax[0].set_xticklabels(KO_genes_order, fontsize=12, rotation='horizontal')
+    # ax[0].set_xlabel("Genes", fontsize=16)
+    # colorbar
+    # fig.colorbar(im0, cax=ax[1], orientation='horizontal', fraction=0.1, pad=0.1)
+
+    # add colormap below the plot showing leeb data, exp_data
+    im1 = ax[1].imshow(exp_data.reshape(1, exp_data.shape[0]), cmap='coolwarm', aspect='auto')
+    # add colorbar to ax[1] and remove the ticks 
+    ax[1].set_yticks([])
+    # ax[2].set_xticks([])
+    ax[1].set_xticks(np.arange(exp_data.shape[0]))
+    ax[1].set_xticklabels(KO_genes_order, fontsize=12, rotation='horizontal')
+    ax[1].set_xlabel("Genes", fontsize=16)
+    # colorbar
+    # fig.colorbar(im1, cax=ax[3], orientation='horizontal', fraction=0.1, pad=0.1)
+    plt.title(title)
+    plt.show()
+    
+def KO_heat_comparison_T(diff, exp_data, title, KO_genes_order):
+    # create a 23 x 2 matrix merging diff and exp_data
+    data = np.array([diff/np.max(np.abs(diff)), exp_data/np.max(np.abs(exp_data))])
+
+    fig, ax = plt.subplots(1, 1, figsize=(15,2), gridspec_kw={'height_ratios': [1]})
+    # simulated data
+    im0 = ax.imshow(data, cmap='coolwarm', aspect='auto')
+    # add colorbar to ax[1] and remove the ticks 
+    ax.set_yticks(np.arange(2))
+    ax.set_yticklabels(['Simulated', 'Experimental'], fontsize=16, rotation='horizontal')
+    ax.set_xticks(np.arange(exp_data.shape[0]))
+    ax.set_xticklabels(KO_genes_order, fontsize=16, rotation='horizontal')
+    ax.set_xlabel("Genes", fontsize=20)
+
+    # colorbar
+    # fig.colorbar(im1, cax=ax[3], orientation='horizontal', fraction=0.1, pad=0.1)
+    plt.title(title)
     plt.show()
 
 # -------------------------------------------------------------------------------------------------
@@ -329,52 +432,33 @@ def KO_activity_sim(matx, field, genes_order, model, N_test_KO=100, n_time=9547)
 
     for i in range(N_test_KO):
         np.random.seed(i*5)
-        KO_spins[:,:,i] = model.generate_samples_SetData(matx=matx, field=field, seed=i*5)
+        KO_spins[:,:,i] = model.generate_samples_SetData(matx=matx, field=field, seed=i*5, t_size = n_time)
     return(KO_spins)
 
-def KO3_avg_weighted(ko, wt_spins, N_test_KO=100):
+def KO3_avg_weighted(ko, wt):
     """ Compute the average spins value for each gene in KO and in WT
     Args:
     - ko(numpy array): activity of the simulated data, array of size (n_genes, n_times, n_sim)
     - wt(numpy array): activity of the wild type data, array of size (n_genes, n_times)
     - N_test_KO(int): number of times the simulation is performed
-        
     """
-    # # average activity for each gene in WT
-    # wt_avg = np.array(wt.mean(axis=1))
-    # wt_std = np.array(wt.std(axis=1, ddof=1))/np.sqrt(wt.shape[1])
-    
-    # activity for each gene in WT - simulated
-    wt_avg_spin = np.array(wt_spins.mean(axis=1))
-    wt_std_spin = np.array(wt_spins.std(axis=1, ddof=1))/np.sqrt(wt_spins.shape[1])
-    wt_weighted_avg = np.zeros(wt_avg_spin.shape[0])
-    wt_weighted_std = np.zeros(wt_avg_spin.shape[0])    
-    for j in range(wt_avg_spin.shape[0]):
-        wt_weighted_avg[j] = DescrStatsW(wt_avg_spin[j,:], weights=1/(wt_std_spin[j,:])**2, ddof=1).mean
-        wt_weighted_std[j] = DescrStatsW(wt_avg_spin[j,:], weights=1/(wt_std_spin[j,:])**2, ddof=1).std
-    
+    # activity for each gene in WT
+    wt_avg = np.array(wt.mean(axis=1)).mean(axis=1)
     # activity for each gene in KO
-    KO_avg_spin = np.zeros((ko.shape[0], N_test_KO))
-    KO_std_spin = np.zeros((ko.shape[0], N_test_KO))
-    print(KO_avg_spin.shape)
-    KO_spins = ko + 1
+    KO_avg = np.array(ko.mean(axis=1)).mean(axis=1)
     
-    for i in range(N_test_KO):
-        KO_avg_spin[:,i] = np.array(KO_spins[:,:,i].mean(axis=1))
-        KO_std_spin[:,i] = np.array(KO_spins[:,:,i].std(axis=1, ddof=1))/np.sqrt(KO_spins[:,:,i].shape[1])
-    
-    KO_weighted_avg = np.zeros(KO_avg_spin.shape[0])
-    KO_weighted_std = np.zeros(KO_avg_spin.shape[0])    
-    for j in range(KO_avg_spin.shape[0]):
-        KO_weighted_avg[j] = DescrStatsW(KO_avg_spin[j,:], weights=1/(KO_std_spin[j,:])**2, ddof=1).mean
-        KO_weighted_std[j] = DescrStatsW(KO_avg_spin[j,:], weights=1/(KO_std_spin[j,:])**2, ddof=1).std
+    # std for KO and WT
+    wt_std = np.zeros(wt.shape[0])   
+    ko_std = np.zeros(ko.shape[0])    
+    for j in range(wt.shape[0]):
+        wt_std[j] = np.std(wt[j,:,:], ddof=1)/np.sqrt(wt.shape[2])
+        ko_std[j] = np.std(ko[j,:,:], ddof=1)/np.sqrt(ko.shape[2])
         
-    return(KO_weighted_avg, KO_weighted_std, wt_weighted_avg, wt_weighted_std)
+    return(KO_avg, ko_std, wt_avg, wt_std)
 
 
-def KO_plots_SimMultiple(ko_avg, ko_std, wt_avg, wt_std, KO_genes_order):
-    """(For 3 KO genes)
-    plot the average activity of the simulated data and the original data"""
+def KO_plots_SimMultiple(ko_avg, ko_std, wt_avg, wt_std, exp_data, ko_genes_order):
+    """(For 3 KO genes) Plot the average activity of the simulated data and the original data"""
     plt.figure(figsize=(18,5))
     plt.errorbar(KO_genes_order, ko_avg, yerr=ko_std,  
                     alpha=1, 
@@ -382,7 +466,7 @@ def KO_plots_SimMultiple(ko_avg, ko_std, wt_avg, wt_std, KO_genes_order):
                     elinewidth=3,
                     color="steelblue",
                     capsize=10,
-                    label= "simulated Data")
+                    label= "KO Data")
 
     plt.errorbar(KO_genes_order, wt_avg, yerr=wt_std,
                     alpha=1, 
@@ -390,13 +474,42 @@ def KO_plots_SimMultiple(ko_avg, ko_std, wt_avg, wt_std, KO_genes_order):
                     elinewidth=1,
                     color="indianred",
                     capsize=10,
-                    label = "original data")
-    plt.legend(loc="upper left", fontsize=16)
-    plt.xticks(fontsize=12)
-    plt.ylabel("Average spin", fontsize=16)
-    plt.xlabel("Genes", fontsize=16)
-    plt.title("Average spin values for each genes", fontsize=20)
-    plt.grid(True)
+                    label = "WT data")
+
+    fig, ax = plt.subplots(3, 1, figsize=(20,10), gridspec_kw={'height_ratios': [10,0.5,0.2]})
+    ax[0].errorbar(ko_genes_order, ko_avg, yerr=ko_std,
+                    alpha=1, 
+                    fmt="o", ms = 10,
+                    elinewidth=3,
+                    color="steelblue",
+                    capsize=10,
+                    label= "Simulated KO Data")
+
+    ax[0].errorbar(ko_genes_order, wt_avg, yerr=wt_std,
+                    alpha=1, 
+                    fmt="o", ms = 10,
+                    elinewidth=1,
+                    color="indianred",
+                    capsize=10,
+                    label = "Simulated WT Data")
+    ax[0].legend(loc="upper left", fontsize=16)
+    ax[0].set_ylabel("Average spin", fontsize=16)
+    # ax[0].set_xlabel("Genes", fontsize=16)
+    ax[0].set_title("Average spin values for each genes", fontsize=20)
+    ax[0].set_xticklabels(ko_genes_order, fontsize=12)
+    ax[0].grid(True)
+
+    # add colormap below the plot showing leeb data, exp_data
+    im = ax[1].imshow(exp_data.reshape(1, exp_data.shape[0]), cmap='coolwarm', aspect='auto')
+    # add colorbar to ax[1] and remove the ticks 
+    ax[1].set_yticks([])
+    ax[1].set_xticks([])
+    ax[1].set_xlabel("Genes", fontsize=16)
+    # change the horizontal size of the image
+    ax[1].set_xlim(-1,exp_data.shape[0])
+    
+    # colorbar
+    fig.colorbar(im, cax=ax[2], orientation='horizontal', fraction=0.1, pad=0.1)
     plt.show()
     
 # --------------------------------------------------------------------------------------------
@@ -484,4 +597,104 @@ def KO_plots_avgAct_SCODE(KO_avg, KO_std, wt_avg, wt_std, KO_genes_order, N_sigm
     plt.xlabel("Genes", fontsize=16)
     plt.title("Average GE values for each genes", fontsize=20)
     plt.grid(True)
+    plt.show()
+    
+    # --------------------------------------------------------------------------------------------
+    # ------------------------------- KO wrapping function ---------------------------------------
+    # --------------------------------------------------------------------------------------------
+    
+    
+# make a wrapper function to run the whole process
+def KO_wrap(KO_gene, interactions_matx, Ising_Model, genes_order, wt_simulated_spins, df_KO_N24_Leeb_cl,  
+            N_test_KO):
+    # KO info
+    KO_pN_rec_matx_R, KO_pN_rec_field_R, KO_gene_idk_R, KO_genes_order_R = info_KO(interactions_matx, Ising_Model, KO_gene,
+                                                                                genes_order=genes_order)
+
+    #Compute LogFC
+    exp_logFC = np.delete(np.array(df_KO_N24_Leeb_cl[KO_gene]), KO_gene_idk_R) # logFC Leeb
+
+    # wt from simulated spins in time 
+    wt_pN_mb_pst_spins_forKO_R = np.delete(np.array(wt_simulated_spins),KO_gene_idk_R, axis=0)+1
+
+    # average activity 
+    KO_pN_mb_pst_avg_R, KO_pN_mb_pst_std_R, wt_pN_mb_pst_avg_R, wt_pN_mb_pst_std_R, _ = KO_avg_weighted(KO_pN_rec_matx_R, KO_pN_rec_field_R, 
+                                                                                                    wt_pN_mb_pst_spins_forKO_R, 
+                                                                                                    Ising_Model, N_test_KO=N_test_KO)
+
+    # plot KO and WT activity
+    # KO_plots_oneSim(ko_spins_sim_1_R, KO_pN_mb_pst_avg_R, KO_pN_mb_pst_std_R, wt_pN_mb_pst_avg_R, wt_pN_mb_pst_std_R, KO_genes_order_R, exp_logFC,
+                    # raster=False, avg=True)
+
+    # Compute difference between KO and WT and its error, compare with Experimental data
+    diff_pN_R, diff_std_pN_R, _ = KO_diff_sim(KO_pN_mb_pst_avg_R, KO_pN_mb_pst_std_R, wt_pN_mb_pst_avg_R, wt_pN_mb_pst_std_R)
+    # plot difference for simulated Data and experimental LogFC
+    in_agreement_pN_R, data_considered_pN_R, considered_genes_pN_R = KO_diff_ExpVsSim(exp_logFC, diff_pN_R, diff_std_pN_R, KO_genes_order_R)
+
+    print("Number of genes in agreement: ", in_agreement_pN_R)
+    print("Number of genes considered: ", data_considered_pN_R)
+    print("Genes considered: ", considered_genes_pN_R)
+
+    # plot difference for simulated Data and experimental LogFC
+    # KO_plof_Diff_LogFC_heat(exp_logFC, diff_pN_R, diff_std_pN_R, KO_genes_order_R, idx_notS_pN_R, 'Difference between WT and KO in Simulated data and Experimental logFC')
+    # KO_plof_Diff_LogFC_heat(exp_logFC, diff_pN_R, diff_std_pN_R, KO_genes_order_R, exp_logFC, 'Difference between WT and KO in Simulated data and Experimental logFC')
+
+    KO_heat_comparison_T(diff_pN_R, exp_logFC, "", KO_genes_order_R)
+
+
+def KO_plots_oneSim_T(diff, ko_avg, ko_std, wt_avg, wt_std, ko_genes_order, exp_data):
+    fig, ax = plt.subplots(5, 1, figsize=(20,10), gridspec_kw={'height_ratios': [10,0.5,0.2, 0.5,0.2]})
+    ax[0].errorbar(ko_genes_order, ko_avg, yerr=ko_std,
+                    alpha=1, 
+                    fmt="o", ms = 10,
+                    elinewidth=3,
+                    color="steelblue",
+                    capsize=10,
+                    label= "Simulated KO Data")
+
+    ax[0].errorbar(ko_genes_order, wt_avg, yerr=wt_std,
+                    alpha=1, 
+                    fmt="o", ms = 10,
+                    elinewidth=1,
+                    color="indianred",
+                    capsize=10,
+                    label = "Simulated WT Data")
+    ax[0].legend(loc="upper left", fontsize=16)
+    ax[0].set_ylabel("Average spin", fontsize=16)
+    # ax[0].set_xlabel("Genes", fontsize=16)
+    ax[0].set_title("Average spin values for each genes", fontsize=20)
+    ax[0].set_xticklabels(ko_genes_order, fontsize=12)
+    ax[0].grid(True)
+    
+    # plot showing simulated data
+    im1 = ax[1].imshow(diff.reshape(1, diff.shape[0]), cmap='coolwarm', aspect='auto',
+                        norm = MidpointNormalize(midpoint=0,
+                                            vmin=-max(np.max(diff), np.abs(np.min(diff))),
+                                            vmax=max(np.max(diff), np.abs(np.min(diff)))))
+    
+    # add colorbar to ax[1] and remove the ticks 
+    ax[1].set_yticks([])
+    ax[1].set_xticks([])
+    
+    # change the horizontal size of the image
+    ax[1].set_xlim(-1,exp_data.shape[0])
+    # colorbar
+    fig.colorbar(im1, cax=ax[2], orientation='horizontal', fraction=0.1, pad=0.1)
+
+    # add colormap below the plot showing leeb data, exp_data
+    im3 = ax[3].imshow(exp_data.reshape(1, exp_data.shape[0]), cmap='coolwarm', aspect='auto',
+                        norm = MidpointNormalize(midpoint=0,
+                                            vmin=-max(np.max(exp_data), np.abs(np.min(exp_data))),
+                                            vmax=max(np.max(exp_data), np.abs(np.min(exp_data)))))
+    
+    # add colorbar to ax[1] and remove the ticks 
+    ax[3].set_yticks([])
+    ax[3].set_xticks([])
+    # ax[1].set_xticks(np.arange(exp_data.shape[0]))
+    ax[3].set_xlabel("Genes", fontsize=16)
+    
+    # change the horizontal size of the image
+    ax[3].set_xlim(-1,exp_data.shape[0])
+    # colorbar
+    fig.colorbar(im3, cax=ax[4], orientation='horizontal', fraction=0.1, pad=0.1)
     plt.show()

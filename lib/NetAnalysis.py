@@ -49,6 +49,7 @@ genes_order = np.concatenate((genes_order, nc_genes))
 # ------ INTERACTION MATRIX ------
 
 def intM_plot(matx, nbin=30, text=""):
+    """ Function to plot the interaction matrix"""
     #bins = np.linspace(np.ndarray.flatten(matx).min(), np.ndarray.flatten(matx).max(), nbin)
     fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(9,7))
     figfunc.plotmat(matx, fig, ax, genes_order, text)
@@ -411,10 +412,10 @@ def visualize_graphTrue(adj_matrix, node_names, naive_nodes, formative_nodes, co
     plt.figure(figsize=(14,14))
     pos = nx.circular_layout(G)
     # Create a dictionary of node-to-color mappings
-    color_map = {node: "lightblue" if node in naive_nodes else "lightgreen" if node in formative_nodes else "darkred" if node in committed_nodes else "darkorange" for node in G.nodes()}
+    color_map = {node: "lightskyblue" if node in naive_nodes else "palegoldenrod" if node in formative_nodes else "salmon" if node in committed_nodes else "silver" for node in G.nodes()}
     # Draw the nodes with different colors
-    nx.draw_networkx_nodes(G, pos, node_color=color_map.values(), node_size=3000)
-    nx.draw_networkx_labels(G, pos, labels={node:node for node in G.nodes()}, font_size=20)
+    nx.draw_networkx_nodes(G, pos, node_color=color_map.values(), node_size=3500)
+    nx.draw_networkx_labels(G, pos, labels={node:node for node in G.nodes()}, font_size=22)
     # Draw only the given interactions if they exist
     edges_to_draw_positive = []
     edges_to_draw_negative = []
@@ -424,9 +425,9 @@ def visualize_graphTrue(adj_matrix, node_names, naive_nodes, formative_nodes, co
             edges_to_draw_positive.append((node1, node2))
         else:
             edges_to_draw_negative.append((node1, node2))
-    nx.draw_networkx_edges(G, pos, edgelist=edges_to_draw_positive, arrowstyle='->', arrowsize=100, edge_color='r', alpha=0.7, width=1.5)
-    nx.draw_networkx_edges(G, pos, edgelist=edges_to_draw_negative, arrowstyle='->', arrowsize=100, edge_color='b', alpha=0.7, width=1.5)
-    plt.title(title, fontsize=20)
+    nx.draw_networkx_edges(G, pos, edgelist=edges_to_draw_positive, arrowstyle='->', arrowsize=120, edge_color='r', alpha=0.7, width=3)
+    nx.draw_networkx_edges(G, pos, edgelist=edges_to_draw_negative, arrowstyle='->', arrowsize=120, edge_color='b', alpha=0.7, width=3)
+    plt.title(title, fontsize=34)
     plt.show()
 
     

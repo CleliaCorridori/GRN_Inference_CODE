@@ -19,6 +19,9 @@ class MidpointNormalize(pltcolors.Normalize):
 
     
 def plotmat(m, fig, ax, ax_names, text, fix = False, cmap = 'RdBu_r'):
+    matplotlib.rc('text', usetex=True)
+    sns.set(font='Avenir')
+    sns.set(style="white")
     #fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(8,6))
     if fix == True:
         img = ax.imshow(m, cmap = cmap, clim=(-1, 1),
@@ -27,7 +30,7 @@ def plotmat(m, fig, ax, ax_names, text, fix = False, cmap = 'RdBu_r'):
                                              vmax=1)
                    )
     else:
-        print(max(np.abs(np.nanmin(m)), np.nanmax(m)))
+        # print(max(np.abs(np.nanmin(m)), np.nanmax(m)))
         lim_val = max(np.abs(np.nanmin(m)), np.nanmax(m))
         
         img = ax.imshow(m, cmap = cmap, clim=(-lim_val, lim_val),
