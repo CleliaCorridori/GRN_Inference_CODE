@@ -47,7 +47,7 @@ class MidpointNormalize(pltcolors.Normalize):
 
 def raster_plot(mat, title = None, delta_t = 1, ax_names=[]):
     N, T = mat.shape
-    fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(20,5))
+    fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(20,8))
     
     ax.imshow(mat[:,:], aspect='auto', cmap = 'gray_r', interpolation = 'None')
              # extent = [0,T*delta_t, 1, N])
@@ -59,7 +59,7 @@ def raster_plot(mat, title = None, delta_t = 1, ax_names=[]):
     ax.set_xlabel('Time', fontsize = 20, labelpad = 10)
     #ax.tick_params(labelsize=17)
     ax.set_yticks(np.linspace(0,N-1,N))
-    ax.set_yticklabels(ax_names, fontsize=12)
+    ax.set_yticklabels(ax_names, fontsize=18)
     
     return fig, ax
 

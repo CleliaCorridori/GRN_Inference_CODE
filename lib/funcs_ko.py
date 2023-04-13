@@ -395,19 +395,23 @@ def KO_heat_comparison(diff, exp_data, title, KO_genes_order):
 def KO_heat_comparison_T(diff, exp_data, title, KO_genes_order):
     # create a 23 x 2 matrix merging diff and exp_data
     data = np.array([diff/np.max(np.abs(diff)), exp_data/np.max(np.abs(exp_data))])
-
-    fig, ax = plt.subplots(1, 1, figsize=(15,2), gridspec_kw={'height_ratios': [1]})
+    print(data)
+    fig, ax = plt.subplots(1, 2, figsize=(19,2), gridspec_kw={'height_ratios': [1], 'width_ratios': [1,0.1]})
     # simulated data
-    im0 = ax.imshow(data, cmap='coolwarm', aspect='auto')
+    im0 = ax[0].imshow(data, cmap='coolwarm', aspect='auto')
+    for i in range(data.shape[1]):
+        for j in range(data.shape[0]):
+            text = ax[0].text(i,j, data[j,i].round(2), fontsize=12,
+                        ha="center", va="center", color="k")
     # add colorbar to ax[1] and remove the ticks 
-    ax.set_yticks(np.arange(2))
-    ax.set_yticklabels(['Simulated', 'Experimental'], fontsize=16, rotation='horizontal')
-    ax.set_xticks(np.arange(exp_data.shape[0]))
-    ax.set_xticklabels(KO_genes_order, fontsize=16, rotation='horizontal')
-    ax.set_xlabel("Genes", fontsize=20)
+    ax[0].set_yticks(np.arange(2))
+    ax[0].set_yticklabels(['Simulated', 'Experimental'], fontsize=16, rotation='horizontal')
+    ax[0].set_xticks(np.arange(exp_data.shape[0]))
+    ax[0].set_xticklabels(KO_genes_order, fontsize=16, rotation='vertical')
+    ax[0].set_xlabel("Genes", fontsize=20)
 
     # colorbar
-    # fig.colorbar(im1, cax=ax[3], orientation='horizontal', fraction=0.1, pad=0.1)
+    fig.colorbar(im0, cax=ax[1], orientation='horizontal', fraction=0.1, pad=0.1, label="Normalized difference")
     plt.title(title)
     plt.show()
 

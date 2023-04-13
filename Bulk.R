@@ -5,8 +5,10 @@ library(RColorBrewer)
 library("pheatmap")
 
 # import BULK DF
-path <- "/Users/cleliacorridori/Dropbox_2021 Dropbox/Jorah Mormont/GRN_Inference/DATA/input_data/geni_IMP.xlsx"
-geneExp <- read_excel(path)
+# path <- "/Users/cleliacorridori/Dropbox_2021 Dropbox/Jorah Mormont/GRN_Inference/DATA/input_data/geni_IMP.xlsx"
+path <- "/Users/cleliacorridori/Dropbox_2021 Dropbox/Jorah Mormont/GRN_Inference/DATA/input_data/imp_genes_bulk_right.csv"
+
+geneExp <- read.csv(path)[-1]
 
 # Extract just the numeric data into a matrix with named rows by gene
 geneExp <- as.data.frame(geneExp)
@@ -39,6 +41,7 @@ geneExp.mean <- (geneExp[,seq(3,34,2)]+geneExp[,seq(3,34,2)])/2
 # divide 21 and 2iL
 geneExp_matrix_2iL.mean <- as.matrix(geneExp.mean[1:8])
 geneExp_matrix_2i.mean <- as.matrix(geneExp.mean[9:16])
+colnames(geneExp_matrix_2iL.mean) <- c("2i+LIF", "24h", "36h","48h","60h", "72h", "84h", "96h")
 
 pheatmap(geneExp_matrix_2i.mean, scale="row", 
          cluster_cols = FALSE, cluster_rows = FALSE, 
