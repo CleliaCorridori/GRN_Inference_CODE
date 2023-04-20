@@ -42,6 +42,7 @@ geneExp.mean <- (geneExp[,seq(3,34,2)]+geneExp[,seq(3,34,2)])/2
 geneExp_matrix_2iL.mean <- as.matrix(geneExp.mean[1:8])
 geneExp_matrix_2i.mean <- as.matrix(geneExp.mean[9:16])
 colnames(geneExp_matrix_2iL.mean) <- c("2i+LIF", "24h", "36h","48h","60h", "72h", "84h", "96h")
+colnames(geneExp_matrix_2i.mean) <- c("2i", "12h", "24h", "36h","48h","60h", "72h", "84h")
 
 pheatmap(geneExp_matrix_2i.mean, scale="row", 
          cluster_cols = FALSE, cluster_rows = FALSE, 

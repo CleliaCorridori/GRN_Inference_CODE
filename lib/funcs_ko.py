@@ -392,10 +392,13 @@ def KO_heat_comparison(diff, exp_data, title, KO_genes_order):
     plt.title(title)
     plt.show()
     
-def KO_heat_comparison_T(diff, exp_data, title, KO_genes_order):
+def KO_heat_comparison_T(diff, exp_data, title, KO_genes_order, Norm=True):
     # create a 23 x 2 matrix merging diff and exp_data
-    data = np.array([diff/np.max(np.abs(diff)), exp_data/np.max(np.abs(exp_data))])
-    print(data)
+    if Norm == True:
+        data = np.array([diff/np.max(np.abs(diff)), exp_data/np.max(np.abs(exp_data))])
+    else:
+        data = np.array([diff, exp_data/np.max(np.abs(exp_data))])
+    # print(data)
     fig, ax = plt.subplots(1, 2, figsize=(19,2), gridspec_kw={'height_ratios': [1], 'width_ratios': [1,0.1]})
     # simulated data
     im0 = ax[0].imshow(data, cmap='coolwarm', aspect='auto')
@@ -644,6 +647,7 @@ def KO_wrap(KO_gene, interactions_matx, Ising_Model, genes_order, wt_simulated_s
     # KO_plof_Diff_LogFC_heat(exp_logFC, diff_pN_R, diff_std_pN_R, KO_genes_order_R, exp_logFC, 'Difference between WT and KO in Simulated data and Experimental logFC')
 
     KO_heat_comparison_T(diff_pN_R, exp_logFC, "", KO_genes_order_R)
+    return(diff_pN_R, exp_logFC, KO_genes_order_R)
 
 
 def KO_plots_oneSim_T(diff, ko_avg, ko_std, wt_avg, wt_std, ko_genes_order, exp_data):
