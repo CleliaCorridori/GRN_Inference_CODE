@@ -61,7 +61,7 @@ def plot_activity_simulated(spins_df_sim, genes_order, title, color, ax):
     ax.legend(loc="upper left", fontsize=20)
     ax.set_ylabel("Average spin", fontsize=20)
     ax.set_xlabel("Genes", fontsize=20)
-    ax.set_title(title, fontsize=20)
+    # ax.set_title(title, fontsize=20)
     ax.grid(True)
     return(avg_activity, avg_activity_std)
 
@@ -92,7 +92,7 @@ def plot_activity(spins_df, genes_order, title, color, ax):
     # ax.set_xticks(fontsize=12)
     ax.set_ylabel("Average spin", fontsize=20)
     ax.set_xlabel("Genes", fontsize=20)
-    ax.set_title(title, fontsize=20)
+    # ax.set_title(title, fontsize=20)
     ax.grid(True)
     return(avg_activity, avg_activity_std)
 

@@ -1,28 +1,16 @@
-import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
-import matplotlib
-from scipy import stats
-from scipy.optimize import curve_fit
-from scipy.stats import norm
 from scipy.stats import spearmanr
 import networkx as nx
-from sklearn.preprocessing import MinMaxScaler
 import seaborn as sns
-import os
-from os import system
 import sys
 sys.path.append('../')
-from scipy.cluster.hierarchy import linkage, dendrogram
 import seaborn as sns
 from matplotlib.lines import Line2D
 
 
 from lib.import_funcs import *
-import lib.fun_plotting as fun_plotting
-from lib.ml_wrapper import asynch_reconstruction
 import lib.figs_funcs as figfunc
-import lib.funcs_raster as funcs_raster
 
 # ------------------------------
 
@@ -114,12 +102,13 @@ def to_adj_matrix(matrix, thr=0.02):
     positive values = +1
     """
     binary_matrix = np.copy(matrix)
+    #Set to zero too small absolute values
+    binary_matrix[np.abs(binary_matrix) <  (thr*np.max(np.abs(matrix)))] = 0
     # Set negative values to -1
     binary_matrix[binary_matrix <= -(thr*np.max(np.abs(matrix)))] = -1
     # Set positive values to 1
     binary_matrix[binary_matrix >=  (thr*np.max(np.abs(matrix)))] = 1
-    #Set to zero too small absolute values
-    binary_matrix[np.abs(binary_matrix) <  (thr*np.max(np.abs(matrix)))] = 0
+   
     return binary_matrix
 
 def adj_plot(adj_matx):
@@ -367,7 +356,7 @@ def string_list_to_tuple(string_list):
 # ------ NETWORK VISUALIZATION -------
 
 def visualize_graph_selNode(adj_matrix, node_names, naive_nodes, formative_nodes, committed_nodes, sel_node):
-    """ Function to visualize all the network hilighting a specific node connections.
+    """ Function to visualize all the network hilighting a specific selected node connections.
     - blue for inhibitory links;
     - red for excitatory links."""
     # Create a directed graph from the adjacency matrix
@@ -384,7 +373,6 @@ def visualize_graph_selNode(adj_matrix, node_names, naive_nodes, formative_nodes
     nx.draw_networkx_nodes(G, pos, node_color=color_map.values(), node_size=3000)
     nx.draw_networkx_labels(G, pos, labels={node:node for node in G.nodes()}, font_size=20)
     
-    
     # Get the index of the selected node
     sel_node_idx = np.where(node_names==sel_node)[0][0]
     edges = [(u,v) for u,v in G.edges() if u == sel_node or v == sel_node]
@@ -397,8 +385,6 @@ def visualize_graph_selNode(adj_matrix, node_names, naive_nodes, formative_nodes
     edges_to_remove = set(sel_node_edges)
     remaining_edges = [edge for edge in edges if edge not in edges_to_remove]
     nx.draw_networkx_edges(G, pos, edgelist=remaining_edges, arrowstyle='->', arrowsize=40, edge_color='lightgrey', alpha=0.7, width=1)
-    plt.show()
-
     plt.show()
     
 
@@ -429,8 +415,95 @@ def visualize_graphTrue(adj_matrix, node_names, naive_nodes, formative_nodes, co
     nx.draw_networkx_edges(G, pos, edgelist=edges_to_draw_negative, arrowstyle='->', arrowsize=120, edge_color='b', alpha=0.7, width=3)
     plt.title(title, fontsize=34)
     plt.show()
-
     
+
+
+def visualize_graphSel(adj_matrix, node_names, naive_nodes, formative_nodes, committed_nodes, interactions=[], title=""):
+    """ Function to visualize the network of the known interaction CORRETLY INFERRED from a list  
+    note: here we plot only the nodes that have at least one connection in edges_to_draw_positive or edges_to_draw_negative"""
+    # Create a directed graph from the adjacency matrix
+    G = nx.DiGraph(adj_matrix.T)
+    # Relabel the nodes with their new labels
+    G = nx.relabel_nodes(G, {i:node_name for i, node_name in enumerate(node_names)})
+    
+    # Get the nodes to keep based on the given interactions
+    nodes_to_keep = set()
+    for interaction in interactions:
+        node1, node2, direction = interaction.split(" ")
+        nodes_to_keep.add(node1)
+        nodes_to_keep.add(node2)
+    # Remove the nodes that do not have at least one connection in edges_to_draw_positive or edges_to_draw_negative
+    nodes_to_remove = set(G.nodes()) - nodes_to_keep
+    G.remove_nodes_from(nodes_to_remove)
+    
+    # Draw the graph using the circular layout
+    plt.figure(figsize=(14,14))
+    pos = nx.circular_layout(G)
+    
+    # Create a dictionary of node-to-color mappings
+    color_map = {node: "lightskyblue" if node in naive_nodes else "palegoldenrod" if node in formative_nodes else "salmon" if node in committed_nodes else "silver" for node in G.nodes()}
+    
+    # Draw the nodes with different colors
+    nx.draw_networkx_nodes(G, pos, node_color=color_map.values(), node_size=3500)
+    nx.draw_networkx_labels(G, pos, labels={node:node for node in G.nodes()}, font_size=22)
+    
+    # Draw only the given interactions if they exist
+    edges_to_draw_positive = []
+    edges_to_draw_negative = []
+    for interaction in interactions:
+        node1, node2, direction = interaction.split(" ")
+        if direction == "1" and adj_matrix[list(node_names).index(node2), list(node_names).index(node1)]>0:
+            edges_to_draw_positive.append((node2, node1))
+        elif direction == "-1" and adj_matrix[list(node_names).index(node2), list(node_names).index(node1)]<0:
+            edges_to_draw_negative.append((node1, node2))
+    nx.draw_networkx_edges(G, pos, edgelist=edges_to_draw_positive, arrowstyle='->', arrowsize=120, edge_color='r', alpha=0.7, width=3)
+    nx.draw_networkx_edges(G, pos, edgelist=edges_to_draw_negative, arrowstyle='->', arrowsize=120, edge_color='b', alpha=0.7, width=3)
+    plt.title(title, fontsize=34)
+    plt.show()
+
+def visualize_graphSelTrue(adj_matrix, node_names, naive_nodes, formative_nodes, committed_nodes, interactions=[], title=""):
+    """ Function to visualize the network of the known interaction from a list  
+    note: here we plot only the nodes that have at least one connection in edges_to_draw_positive or edges_to_draw_negative"""
+    # Create a directed graph from the adjacency matrix
+    G = nx.DiGraph(adj_matrix.T)
+    # Relabel the nodes with their new labels
+    G = nx.relabel_nodes(G, {i:node_name for i, node_name in enumerate(node_names)})
+    
+    # Get the nodes to keep based on the given interactions
+    nodes_to_keep = set()
+    for interaction in interactions:
+        node1, node2, direction = interaction.split(" ")
+        nodes_to_keep.add(node1)
+        nodes_to_keep.add(node2)
+    # Remove the nodes that do not have at least one connection in edges_to_draw_positive or edges_to_draw_negative
+    nodes_to_remove = set(G.nodes()) - nodes_to_keep
+    G.remove_nodes_from(nodes_to_remove)
+    
+    # Draw the graph using the circular layout
+    plt.figure(figsize=(14,14))
+    pos = nx.circular_layout(G)
+    
+    # Create a dictionary of node-to-color mappings
+    color_map = {node: "lightskyblue" if node in naive_nodes else "palegoldenrod" if node in formative_nodes else "salmon" if node in committed_nodes else "silver" for node in G.nodes()}
+    
+    # Draw the nodes with different colors
+    nx.draw_networkx_nodes(G, pos, node_color=color_map.values(), node_size=3500)
+    nx.draw_networkx_labels(G, pos, labels={node:node for node in G.nodes()}, font_size=22)
+    
+    # Draw only the given interactions if they exist
+    edges_to_draw_positive = []
+    edges_to_draw_negative = []
+    for interaction in interactions:
+        node1, node2, direction = interaction.split(" ")
+        if direction == "1":
+            edges_to_draw_positive.append((node2, node1))
+        elif direction == "-1":
+            edges_to_draw_negative.append((node1, node2))
+    nx.draw_networkx_edges(G, pos, edgelist=edges_to_draw_positive, arrowstyle='->', arrowsize=120, edge_color='r', alpha=0.7, width=3)
+    nx.draw_networkx_edges(G, pos, edgelist=edges_to_draw_negative, arrowstyle='->', arrowsize=120, edge_color='b', alpha=0.7, width=3)
+    plt.title(title, fontsize=34)
+    plt.show()
+
 def string_list_to_tuple(string_list):
     """ to change the known interaction format:
     - from: "geneA geneB +/-1"
