@@ -41,17 +41,25 @@ def plot_activity_simulated(spins_df_sim, genes_order, title, color, ax):
     NOTES: The standard deviation is computed condidering all the data (i.e. all the time steps, all the tests)
     and dividing by the square root of the number of tests.
         """
+        
+    df_reshaped = spins_df_sim.reshape((spins_df_sim.shape[0], spins_df_sim.shape[1]*spins_df_sim.shape[2]))
     # spins_df_sim is (n_genes, n_time, n_test)
-    avg_activity_each = spins_df_sim.mean(axis=1)
-    # print(avg_activity_each.shape, avg_activity_std_each.shape)
-    avg_activity = np.zeros(spins_df_sim.shape[0])
-    avg_activity_std = np.zeros(spins_df_sim.shape[0])
-    for j in range(spins_df_sim.shape[0]):
-        # avg_activity_std[j] = DescrStatsW(avg_activity_each[j,:], weights=1/(avg_activity_std_each[j,:])**2, ddof=1).std
-        avg_activity[j] = np.mean(avg_activity_each[j,:])
-        avg_activity_std[j] = np.std(spins_df_sim[j,:,:], ddof=1)/np.sqrt(spins_df_sim.shape[2])
-
-    ax.errorbar(genes_order, avg_activity, yerr=avg_activity_std, 
+    # avg_activity_each = spins_df_sim.mean(axis=1)
+    # # print(avg_activity_each.shape, avg_activity_std_each.shape)
+    # avg_activity = np.zeros(spins_df_sim.shape[0])
+    # avg_activity_std = np.zeros(spins_df_sim.shape[0])
+    # for j in range(spins_df_sim.shape[0]):
+    #     # avg_activity_std[j] = DescrStatsW(avg_activity_each[j,:], weights=1/(avg_activity_std_each[j,:])**2, ddof=1).std
+    #     avg_activity[j] = np.mean(avg_activity_each[j,:])
+    #     avg_activity_std[j] = np.std(spins_df_sim[j,:,:], ddof=1)/np.sqrt(spins_df_sim.shape[2])
+    # comupute first and third quartile
+    quartiles = np.quantile(df_reshaped, [0.25, 0.75], axis=1)
+    print(quartiles.shape)
+    yerr = []
+    for ii in range(len(genes_order)):
+        yerr.append((quartiles[1,ii],quartiles[0,ii]))
+    yerr = np.array(yerr).T
+    ax.errorbar(genes_order, df_reshaped.mean(axis=1), yerr=yerr, #avg_activity_std, 
                  alpha=1, 
                  fmt="o", ms = 10,
                  elinewidth=1,
@@ -63,7 +71,7 @@ def plot_activity_simulated(spins_df_sim, genes_order, title, color, ax):
     ax.set_xlabel("Genes", fontsize=20)
     # ax.set_title(title, fontsize=20)
     ax.grid(True)
-    return(avg_activity, avg_activity_std)
+    return(df_reshaped.mean(axis=1), df_reshaped.std(axis=1)) #(avg_activity, avg_activity_std)
 
 def plot_activity(spins_df, genes_order, title, color, ax):
     """ Compute the average activity of the genes in the EXPERIMENTAL dataset and their standard deviation.
@@ -81,7 +89,13 @@ def plot_activity(spins_df, genes_order, title, color, ax):
     avg_activity     = spins_df.mean(axis=1)
     avg_activity_std = spins_df.std(axis=1)/np.sqrt(spins_df.shape[1])
 
-    ax.errorbar(genes_order, avg_activity, yerr=avg_activity_std, 
+    quartiles = np.quantile(spins_df, [0.25, 0.75], axis=1)
+    print(quartiles.shape)
+    yerr = []
+    for ii in range(len(genes_order)):
+        yerr.append((quartiles[1,ii],quartiles[0,ii]))
+    yerr = np.array(yerr).T
+    ax.errorbar(genes_order, avg_activity, yerr=yerr,  # avg_activity_std, 
                  alpha=1, 
                  fmt="o", ms = 10,
                  elinewidth=1,
@@ -706,3 +720,13 @@ def KO_plots_oneSim_T(diff, ko_avg, ko_std, wt_avg, wt_std, ko_genes_order, exp_
     # colorbar
     fig.colorbar(im3, cax=ax[4], orientation='horizontal', fraction=0.1, pad=0.1)
     plt.show()
+
+### Fraction of differences in agremeent with experimental data
+def fraction_agreement(diff_sim_norm, log2FC_exp_norm, genes_KOs, threshold):
+    common_low = np.intersect1d(np.where(diff_sim_norm<-threshold)[0], np.where(log2FC_exp_norm<-threshold)[0])
+    frac_low = len(common_low)/len(genes_KOs)
+    common_high = np.intersect1d(np.where(diff_sim_norm>threshold)[0], np.where(log2FC_exp_norm>threshold)[0])
+    frac_high = len(common_high)/len(genes_KOs)
+    common_zero = np.intersect1d(np.where(np.abs(diff_sim_norm)<threshold)[0],  np.where(np.abs(log2FC_exp_norm)<threshold)[0])
+    frac_zero = len(common_zero)/len(genes_KOs)
+    return frac_low, frac_high, frac_zero, sum([frac_low, frac_high, frac_zero])
