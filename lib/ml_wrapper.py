@@ -31,7 +31,10 @@ class asynch_reconstruction():
         self.Nsteps = x.shape[1]
 
         self.J = np.zeros((x.shape[0], x.shape[0]))
-        self.h = np.arctanh(np.mean(x, axis = 1))
+        # np.random.seed(0)
+        # self.J = np.random.uniform(low=-1, high=1, size=(24, 24))
+        
+        # self.h = np.arctanh(np.mean(x, axis = 1))
         self.h = np.zeros(len(np.mean(x, axis = 1)))
         
         self.covariance = fun_asynch.nb_cov(x)

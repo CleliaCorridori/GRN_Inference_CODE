@@ -453,7 +453,7 @@ def visualize_graphSel(adj_matrix, node_names, naive_nodes, formative_nodes, com
     for interaction in interactions:
         node1, node2, direction = interaction.split(" ")
         if direction == "1" and adj_matrix[list(node_names).index(node2), list(node_names).index(node1)]>0:
-            edges_to_draw_positive.append((node2, node1))
+            edges_to_draw_positive.append((node1, node2))
         elif direction == "-1" and adj_matrix[list(node_names).index(node2), list(node_names).index(node1)]<0:
             edges_to_draw_negative.append((node1, node2))
     nx.draw_networkx_edges(G, pos, edgelist=edges_to_draw_positive, arrowstyle='->', arrowsize=120, edge_color='r', alpha=0.7, width=3)

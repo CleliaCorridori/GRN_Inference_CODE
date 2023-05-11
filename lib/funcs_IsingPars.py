@@ -23,18 +23,18 @@ import lib.funcs_general as funcs_general
 
 # ------------------------------ Grid Search for the best set of Hyperparameters
 
-def grid_search(spins, params, interaction_list, genes_order, Ntrials=5, seedSet=20961, Norm=True, thr=0.0):
+def grid_search(spins, params, interaction_list, genes_order, Ntrials=5, seedSet=20961, Norm=True, thr=0.0, frac_thr = False):
     """Evaluate the performance of the model with different sets of hyperparameters
 
     Args:
-        spins (numpy array): matrix of the binnarized data, rows are genes, columns are time points
-        params (dictionary): possible set of hyperparameters to evaluate
-        interaction_list (list pf strings): list of known interactions with the format [gene1, gene2, interaction_type]
-        genes_order (numpy array): list of genes in the same order as the rows of the DataFrame
-        Ntrials (int, optional): Number of set of hyperparameters selected. Defaults to 5.
-        seedSet (int, optional): seed
-        Norm (bool, optional): Normalize the interactiona. Defaults to True.
-        thr (float, optional): threshold to set an interactions to zero if below it. Defaults to 0.0.
+       - spins (numpy array): matrix of the binnarized data, rows are genes, columns are time points
+       - params (dictionary): possible set of hyperparameters to evaluate
+       - interaction_list (list pf strings): list of known interactions with the format [gene1, gene2, interaction_type]
+       - genes_order (numpy array): list of genes in the same order as the rows of the DataFrame
+       - Ntrials (int, optional): Number of set of hyperparameters selected. Defaults to 5.
+       - seedSet (int, optional): seed
+       - Norm (bool, optional): Normalize the interactiona. Defaults to True.
+       - thr (float, optional): threshold to set an interactions to zero if below it. Defaults to 0.0.
         
     output: 
         matx_sel: matrix of the inferred interaction matrices
@@ -65,6 +65,12 @@ def grid_search(spins, params, interaction_list, genes_order, Ntrials=5, seedSet
         # reconstruct the model 
         model.reconstruct(spins, Nepochs = par_sel["Nepochs"], start_lr = par_sel["lr"], 
                           drop = par_sel["drop"], edrop = par_sel["edrop"])
+        
+        ###############################
+        if frac_thr:
+            thr = np.percentile(np.abs(model.J), thr*100)/np.nanmax(np.abs(model.J))
+            print("computed threshold", thr)
+        ###############################
 
         # evaluate the model with whant we know experimentally
         tp_val[ii], info_int[:,:,ii], _ = funcs_general.TP_plot(interaction_list, model.J, genes_order, 

@@ -25,7 +25,7 @@ committed = ["Dnmt3a", "Dnmt3b", "Lef1", "Otx2", "Pou3f1", "Etv5"]
 # ------------------------------ Plot average activity time of genes ------------------------------
 # -------------------------------------------------------------------------------------------------
 
-def plot_activity_simulated(spins_df_sim, genes_order, title, color, ax):
+def plot_activity_simulated(spins_df_sim, genes_order, title, color, ax, reshape=True):
     """ Compute the average activity of the genes in the simulated dataset and their standard deviation.
     Plot the average activity of the genes in the simulated dataset.
     Input:
@@ -41,8 +41,11 @@ def plot_activity_simulated(spins_df_sim, genes_order, title, color, ax):
     NOTES: The standard deviation is computed condidering all the data (i.e. all the time steps, all the tests)
     and dividing by the square root of the number of tests.
         """
-        
-    df_reshaped = spins_df_sim.reshape((spins_df_sim.shape[0], spins_df_sim.shape[1]*spins_df_sim.shape[2]))
+    if reshape:
+        df_reshaped = spins_df_sim.reshape((spins_df_sim.shape[0], spins_df_sim.shape[1]*spins_df_sim.shape[2]))
+    else:
+        df_reshaped = spins_df_sim
+
     # spins_df_sim is (n_genes, n_time, n_test)
     # avg_activity_each = spins_df_sim.mean(axis=1)
     # # print(avg_activity_each.shape, avg_activity_std_each.shape)
@@ -54,18 +57,19 @@ def plot_activity_simulated(spins_df_sim, genes_order, title, color, ax):
     #     avg_activity_std[j] = np.std(spins_df_sim[j,:,:], ddof=1)/np.sqrt(spins_df_sim.shape[2])
     # comupute first and third quartile
     quartiles = np.quantile(df_reshaped, [0.25, 0.75], axis=1)
-    print(quartiles.shape)
     yerr = []
     for ii in range(len(genes_order)):
         yerr.append((quartiles[1,ii],quartiles[0,ii]))
     yerr = np.array(yerr).T
-    ax.errorbar(genes_order, df_reshaped.mean(axis=1), yerr=yerr, #avg_activity_std, 
+    ax.errorbar(genes_order, df_reshaped.mean(axis=1), yerr=[df_reshaped.mean(axis=1)-quartiles[0,:], quartiles[1,:]-df_reshaped.mean(axis=1)], #avg_activity_std, 
                  alpha=1, 
                  fmt="o", ms = 10,
                  elinewidth=1,
                  color=color,
                  capsize=10,
                  label = title)
+    # ax.plot(genes_order, quartiles[0,:], 'o', color="red")
+    # ax.plot(genes_order, quartiles[1,:], 'o', color="red")
     ax.legend(loc="upper left", fontsize=20)
     ax.set_ylabel("Average spin", fontsize=20)
     ax.set_xlabel("Genes", fontsize=20)
@@ -90,18 +94,15 @@ def plot_activity(spins_df, genes_order, title, color, ax):
     avg_activity_std = spins_df.std(axis=1)/np.sqrt(spins_df.shape[1])
 
     quartiles = np.quantile(spins_df, [0.25, 0.75], axis=1)
-    print(quartiles.shape)
-    yerr = []
-    for ii in range(len(genes_order)):
-        yerr.append((quartiles[1,ii],quartiles[0,ii]))
-    yerr = np.array(yerr).T
-    ax.errorbar(genes_order, avg_activity, yerr=yerr,  # avg_activity_std, 
+
+    ax.errorbar(genes_order, avg_activity, yerr=[avg_activity-quartiles[0,:], quartiles[1,:]-avg_activity],  # avg_activity_std, 
                  alpha=1, 
                  fmt="o", ms = 10,
                  elinewidth=1,
                  color=color,
                  capsize=10,
                  label = title)
+
     ax.legend(loc="upper left", fontsize=20)
     # ax.set_xticks(fontsize=12)
     ax.set_ylabel("Average spin", fontsize=20)
@@ -115,7 +116,14 @@ def plot_activity(spins_df, genes_order, title, color, ax):
 # -------------------------------------------------------------------------------------------------
 
 
-def sum_squared_abs_diff(array1, array2):
+def sum_squared_abs_diff(a, b):
+    # create boolean masks for non-NaN values
+    mask_a = ~np.isnan(a)
+    mask_b = ~np.isnan(b)
+
+    # use masks to select non-NaN values
+    array1 = a[mask_a & mask_b]
+    array2 = b[mask_a & mask_b]
     """Calculate the sum of squared absolute differences between two matrices"""
     diff = (array1.flatten()-array2.flatten())**2
     return np.sqrt(np.sum(diff))
@@ -415,7 +423,7 @@ def KO_heat_comparison_T(diff, exp_data, title, KO_genes_order, Norm=True):
     # print(data)
     fig, ax = plt.subplots(1, 2, figsize=(19,2), gridspec_kw={'height_ratios': [1], 'width_ratios': [1,0.1]})
     # simulated data
-    im0 = ax[0].imshow(data, cmap='coolwarm', aspect='auto')
+    im0 = ax[0].imshow(data, cmap='coolwarm', aspect='auto', vmin=-1, vmax=1)
     for i in range(data.shape[1]):
         for j in range(data.shape[0]):
             text = ax[0].text(i,j, data[j,i].round(2), fontsize=12,
