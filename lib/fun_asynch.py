@@ -275,7 +275,7 @@ def momentum_reconstruct(spins, new_h, new_J, cov, dot_cov, delta_t, Nepochs = 5
         vJ, new_J = momentum_update(gJ, new_J, vJ, eta, MOM, LAMBDA, L1)
         # np.fill_diagonal(new_J, 0)
         # np.fill_diagonal(gJ, 0)
-        if t % 100 == 0:
+        if t % 300 == 0:
             L = L_asynch(new_h, new_J, spins, cov, dot_cov, theta, delta_t)
             print(t, '\t', np.round(np.max(np.abs(gJ)), 6), '\t', np.round(np.max(np.abs(gh)), 6),
                   '\t', np.round(np.max(np.abs(new_J - old_J)), 4), '\t', np.round(np.max(np.abs(new_h - old_h)),4),
@@ -361,7 +361,7 @@ def NADAM_reconstruct(spins, new_h, new_J, cov, dot_cov, delta_t, Nepochs = 500,
         mJ, vJ, new_J = NADAM_update(mJ, vJ, gJ, t, eta, new_J, LAMBDA, L1)
         # np.fill_diagonal(new_J, 0) #################
         # np.fill_diagonal(gJ, 0)
-        if t % 100 == 0:
+        if t % 300 == 0:
             L = L_asynch(new_h, new_J, spins, cov, dot_cov, theta, delta_t)
             print(t, '\t', np.round(np.max(np.abs(gJ)), 6), '\t', np.round(np.max(np.abs(gh)), 6),
                   '\t', np.round(np.max(np.abs(new_J - old_J)), 4), '\t', np.round(np.max(np.abs(new_h - old_h)),4),
