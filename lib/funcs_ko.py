@@ -245,7 +245,7 @@ def KO_avg_weighted(matx, field, wt_spins, model, N_test_KO=100, N_time =10000):
     return(KO_avg, KO_std, wt_avg, wt_std, KO_spins)
 
 
-def KO_diff_sim(KO_avg, KO_std ,wt_avg, wt_std, thr_significance=3):
+def KO_diff_sim(KO_avg, KO_std ,wt_avg, wt_std, thr_significance=0):
     """ Compute the differences between the average activity of the KO and the WT
     Args:
         - KO_avg (array): average activity of the KO
@@ -263,12 +263,8 @@ def KO_diff_sim(KO_avg, KO_std ,wt_avg, wt_std, thr_significance=3):
     for i in range(len(diff_sim)):
         # print(i, np.abs(diff_sim[i])- thr_significance*diff_sim_std[i])
         if np.abs(diff_sim[i])<thr_significance*diff_sim_std[i]:
-            # print("The difference between the average activity of the KO and the WT is not significant for gene ", i)
             not_significant.append(i)
-    # diff_sim_std = np.sqrt(KO_std**2 + KO_std**2)
-    # logFC between KO and WT
-    # diff_sim = np.log2(KO_avg/ wt_avg)
-    # diff_sim_std = np.sqrt((wt_avg/(KO_avg*np.log(2)))**2 * (KO_std**2+wt_std**2))
+
     return(diff_sim, diff_sim_std, np.array(not_significant))
 
 def KO_diff_ExpVsSim(logFC_Exp, diff_Sim, diff_Sim_std, genes_order = genes_order, thr_significance=3):
@@ -649,26 +645,17 @@ def KO_wrap(KO_gene, interactions_matx, Ising_Model, genes_order, wt_simulated_s
     # average activity 
     KO_pN_mb_pst_avg_R, KO_pN_mb_pst_std_R, wt_pN_mb_pst_avg_R, wt_pN_mb_pst_std_R, _ = KO_avg_weighted(KO_pN_rec_matx_R, KO_pN_rec_field_R, 
                                                                                                     wt_pN_mb_pst_spins_forKO_R, 
-                                                                                                    Ising_Model, N_test_KO=N_test_KO)
+                                                                                                    Ising_Model, N_test_KO=N_test_KO, N_time =10000)
 
     # plot KO and WT activity
     # KO_plots_oneSim(ko_spins_sim_1_R, KO_pN_mb_pst_avg_R, KO_pN_mb_pst_std_R, wt_pN_mb_pst_avg_R, wt_pN_mb_pst_std_R, KO_genes_order_R, exp_logFC,
                     # raster=False, avg=True)
 
     # Compute difference between KO and WT and its error, compare with Experimental data
-    diff_pN_R, diff_std_pN_R, _ = KO_diff_sim(KO_pN_mb_pst_avg_R, KO_pN_mb_pst_std_R, wt_pN_mb_pst_avg_R, wt_pN_mb_pst_std_R)
+    diff_pN_R, _, _ = KO_diff_sim(KO_pN_mb_pst_avg_R, KO_pN_mb_pst_std_R, wt_pN_mb_pst_avg_R, wt_pN_mb_pst_std_R)
     # plot difference for simulated Data and experimental LogFC
-    in_agreement_pN_R, data_considered_pN_R, considered_genes_pN_R = KO_diff_ExpVsSim(exp_logFC, diff_pN_R, diff_std_pN_R, KO_genes_order_R)
 
-    print("Number of genes in agreement: ", in_agreement_pN_R)
-    print("Number of genes considered: ", data_considered_pN_R)
-    print("Genes considered: ", considered_genes_pN_R)
-
-    # plot difference for simulated Data and experimental LogFC
-    # KO_plof_Diff_LogFC_heat(exp_logFC, diff_pN_R, diff_std_pN_R, KO_genes_order_R, idx_notS_pN_R, 'Difference between WT and KO in Simulated data and Experimental logFC')
-    # KO_plof_Diff_LogFC_heat(exp_logFC, diff_pN_R, diff_std_pN_R, KO_genes_order_R, exp_logFC, 'Difference between WT and KO in Simulated data and Experimental logFC')
-
-    KO_heat_comparison_T(diff_pN_R, exp_logFC, "", KO_genes_order_R)
+    # KO_heat_comparison_T(diff_pN_R, exp_logFC, "", KO_genes_order_R)
     return(diff_pN_R, exp_logFC, KO_genes_order_R)
 
 

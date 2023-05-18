@@ -43,8 +43,8 @@ def plotmat(m, fig, ax, ax_names, text, fix = False, cmap = 'RdBu_r'):
     cbarM.set_label(r'$C_{ij}$', rotation = -90, labelpad = 20, fontsize = 12)
     cbarM.ax.tick_params(labelsize = 12)
 
-    ax.set_xlabel('Gene label', fontsize = 18, labelpad = 10)
-    ax.set_ylabel('Genes label', fontsize = 18, labelpad = 10)
+    # ax.set_xlabel('Gene label', fontsize = 18, labelpad = 10)
+    # ax.set_ylabel('Genes label', fontsize = 18, labelpad = 10)
     ax.set_xticks(np.arange(0,np.shape(np.array(m))[0]))
     ax.set_xticklabels(ax_names, rotation='vertical', fontsize=16)
     ax.set_yticks(np.arange(0,np.shape(np.array(m))[0]))

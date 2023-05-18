@@ -68,7 +68,7 @@ def interactions_plot(matx, matx_info, thr=0.01, nbins=30):
     centroids_J = (bins_J[1:] + bins_J[:-1]) / 2
 
 
-    plt.figure(figsize=(12,8))
+    plt.figure(figsize=(8,7))
     plt.plot(centroids_J, n_J, color = "navy", lw = 5)
 
     plt.axvline(np.mean(J_lin), color='orangered', linestyle='-', lw = 3,
@@ -89,7 +89,7 @@ def interactions_plot(matx, matx_info, thr=0.01, nbins=30):
     plt.xlabel('$J_{i,j}$', fontsize=20)
     plt.ylabel('$P(J_{i,j})$', fontsize=20)
     plt.tick_params(axis='both', labelsize=18)
-    plt.legend(fontsize= 20)
+    plt.legend(fontsize= 17, loc="upper left")
 
     
     
