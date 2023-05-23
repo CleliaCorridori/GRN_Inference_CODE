@@ -718,9 +718,9 @@ def KO_plots_oneSim_T(diff, ko_avg, ko_std, wt_avg, wt_std, ko_genes_order, exp_
 
 ### Fraction of differences in agremeent with experimental data
 def fraction_agreement(diff_sim_norm, log2FC_exp_norm, genes_KOs, threshold):
-    common_low = np.intersect1d(np.where(diff_sim_norm<-threshold)[0], np.where(log2FC_exp_norm<-threshold)[0])
+    common_low = np.intersect1d(np.where(diff_sim_norm<=-threshold)[0], np.where(log2FC_exp_norm<=-threshold)[0])
     frac_low = len(common_low)/len(genes_KOs)
-    common_high = np.intersect1d(np.where(diff_sim_norm>threshold)[0], np.where(log2FC_exp_norm>threshold)[0])
+    common_high = np.intersect1d(np.where(diff_sim_norm>=threshold)[0], np.where(log2FC_exp_norm>=threshold)[0])
     frac_high = len(common_high)/len(genes_KOs)
     common_zero = np.intersect1d(np.where(np.abs(diff_sim_norm)<threshold)[0],  np.where(np.abs(log2FC_exp_norm)<threshold)[0])
     frac_zero = len(common_zero)/len(genes_KOs)
